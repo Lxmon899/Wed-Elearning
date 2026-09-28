@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -16,6 +15,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
 
   enrollments Enrollment[]
+  progresses  Progress[]
   
   @@map("users")
 }
@@ -30,8 +30,23 @@ model Course {
   createdAt   DateTime @default(now()) @map("created_at")
 
   enrollments Enrollment[]
+  lessons     Lesson[]
   
   @@map("courses")
+}
+
+model Lesson {
+  id        Int      @id @default(autoincrement())
+  title     String
+  videoUrl  String   @map("video_url")
+  duration  Int?     // ความยาววิดีโอ (วินาที)
+  order     Int      @default(0) // ลำดับบทเรียน
+  courseId  Int      @map("course_id")
+
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progresses Progress[]
+  
+  @@map("lessons")
 }
 
 model Enrollment {
@@ -45,4 +60,19 @@ model Enrollment {
 
   @@unique([userId, courseId])
   @@map("enrollments")
+}
+
+model Progress {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  lessonId       Int      @map("lesson_id")
+  completed      Boolean  @default(false)
+  watchedSeconds Int      @default(0) @map("watched_seconds")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId])
+  @@map("progresses")
 }
