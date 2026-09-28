@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const courses = await prisma.course.findMany({
-      orderBy: { createdAt: 'desc' }, // เรียงจากใหม่ → เก่า
+      orderBy: { id: 'desc' }, // เรียงจากใหม่ → เก่า
     });
     res.json(courses);
   } catch (error) {
