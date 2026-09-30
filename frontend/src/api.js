@@ -29,11 +29,23 @@ export const getCourse = async (id) => {
   const res = await fetch(`${API_URL}/courses/${id}`);
   return res.json();
 };
+
+export const createCourse = async (courseData) => {
+  const res = await fetch(`${API_URL}/courses`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(courseData),
+  });
+  return res.json();
+};
 // Enrollments
 export const enrollCourse = async (courseId) => {
   const res = await fetch(`${API_URL}/enrollments`, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${getToken()}`  // ← ส่ง Token ไปด้วย
     },
@@ -81,7 +93,7 @@ export const getLessons = async (courseId) => {
 export const updateProgress = async (lessonId, watchedSeconds, completed = false) => {
   const res = await fetch(`${API_URL}/progress`, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${getToken()}`
     },
@@ -93,6 +105,40 @@ export const updateProgress = async (lessonId, watchedSeconds, completed = false
 export const getCourseProgress = async (courseId) => {
   const res = await fetch(`${API_URL}/progress/courses/${courseId}`, {
     headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  return res.json();
+};
+
+// ==========================================
+// Upload
+// ==========================================
+export const uploadVideo = async (file) => {
+  const formData = new FormData();
+  formData.append('video', file); // ชื่อ 'video' ต้องตรงกับ upload.single('video')
+
+  const res = await fetch(`${API_URL}/upload/video`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+      // ❌ อย่าใส่ 'Content-Type': 'multipart/form-data' 
+      // Browser จะใส่ให้เองพร้อม Boundary
+    },
+    body: formData,
+  });
+  return res.json();
+};
+
+// ==========================================
+// Create Lesson
+// ==========================================
+export const createLesson = async (courseId, lessonData) => {
+  const res = await fetch(`${API_URL}/courses/${courseId}/lessons`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(lessonData),
   });
   return res.json();
 };

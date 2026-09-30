@@ -1,22 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  BookOpen,
+  Clock,
+  Star,
+  CheckCircle,
+  Play,
+  PlusCircle,
+  ShieldCheck,
+  Award,
+  ArrowLeft,
+} from 'lucide-react';
 import { getCourse, enrollCourse, checkEnrollment } from '../api';
 
 function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [course, setCourse] = useState(null);
   const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
-  
-  // เช็คว่า User ล็อกอินอยู่หรือไม่
+
   const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    // 1. โหลดข้อมูลคอร์ส
-    getCourse(id).then(data => {
+    getCourse(id).then((data) => {
       if (data.error) {
         alert('ไม่พบคอร์สนี้');
         navigate('/');
@@ -26,17 +36,14 @@ function CourseDetail() {
       }
     });
 
-    // 2. เช็คสถานะการลงทะเบียน (ถ้า login อยู่)
     if (user) {
-      checkEnrollment(id).then(data => {
+      checkEnrollment(id).then((data) => {
         if (data.enrolled) setEnrolled(true);
       });
     }
-  }, [id]); // ← รันใหม่ทุกครั้งที่เปลี่ยนคอร์ส
+  }, [id]);
 
-  // ฟังก์ชันกดลงทะเบียน
   const handleEnroll = async () => {
-    // ถ้ายังไม่ login → ไปหน้า login
     if (!user) {
       alert('กรุณาเข้าสู่ระบบก่อนลงทะเบียน');
       navigate('/login');
@@ -55,63 +62,172 @@ function CourseDetail() {
     }
   };
 
-  if (loading) return <div className="text-center p-10 text-gray-500">กำลังโหลด...</div>;
+  const formatDuration = (seconds) => {
+    if (!seconds) return '15 นาที';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')} นาที`;
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 pt-12">
+        <div className="h-64 bg-slate-200 rounded-3xl animate-pulse mb-6" />
+        <div className="space-y-4">
+          <div className="h-8 bg-slate-200 rounded-xl w-3/4 animate-pulse" />
+          <div className="h-4 bg-slate-200 rounded-xl w-1/2 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* รูปปกคอร์ส */}
-        <img 
-          src={course.thumbnail || 'https://via.placeholder.com/800x400'} 
-          alt={course.title}
-          className="w-full h-80 object-cover"
-        />
-        
-        <div className="p-8">
-          {/* หัวข้อ + ราคา */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">{course.title}</h1>
-            <span className="text-2xl font-bold text-green-600 bg-green-50 px-4 py-2 rounded-lg">
-              {course.price === 0 ? 'ฟรี!' : `฿${course.price}`}
-            </span>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/')}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-rose-600 transition mb-4 sm:mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>กลับไปหน้ารวมคอร์ส</span>
+      </button>
+
+      <div className="bg-white rounded-2xl sm:rounded-3xl crimson-shadow border border-rose-100/80 overflow-hidden">
+        {/* Banner Area */}
+        <div className="relative h-64 sm:h-80 md:h-96 w-full overflow-hidden bg-slate-950">
+          <img
+            src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1200'}
+            alt={course.title}
+            className="w-full h-full object-cover opacity-85"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+
+          {/* Floating Badges */}
+          <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 text-white">
+            <div className="space-y-1.5 sm:space-y-2 max-w-2xl">
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white shadow-sm inline-block">
+                หลักสูตรคุณภาพ
+              </span>
+              <h1 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight">
+                {course.title}
+              </h1>
+              <p className="text-slate-300 text-xs sm:text-sm flex items-center gap-2">
+                <span>👨‍🏫 ผู้สอน: {course.instructor}</span>
+              </p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 sm:px-5 sm:py-3 rounded-2xl text-left sm:text-right shrink-0 self-start sm:self-auto">
+              <span className="text-[11px] sm:text-xs text-rose-200 font-semibold block">ราคาคอร์ส</span>
+              <span className="text-xl sm:text-3xl font-black text-white">
+                {course.price === 0 ? 'เรียนฟรี' : `฿${course.price}`}
+              </span>
+            </div>
           </div>
-          
-          <p className="text-gray-600 text-lg mb-6">👨‍🏫 ผู้สอน: {course.instructor}</p>
-          
-          {/* รายละเอียด */}
-          <div className="border-t pt-6">
-            <h2 className="text-xl font-semibold mb-3 text-gray-800">รายละเอียดคอร์ส</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-              {course.description}
+        </div>
+
+        <div className="p-4 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
+          {/* Action Callout */}
+          <div className="p-4 sm:p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-extrabold text-slate-900 text-lg">
+                {enrolled ? 'คุณได้ลงทะเบียนในคอร์สนี้แล้ว' : 'พร้อมเริ่มเรียนรู้ทักษะนี้หรือยัง?'}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {enrolled ? 'เข้าห้องเรียนและบันทึกความคืบหน้าได้ทันที' : 'เข้าถึงวิดีโอเนื้อหาและโปรเจกต์ได้ตลอดชีพ'}
+              </p>
+            </div>
+
+            {enrolled ? (
+              <Link
+                to={`/learn/${course.id}`}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl crimson-gradient text-white font-bold text-base hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2"
+              >
+                <Play className="w-5 h-5 fill-white" />
+                <span>เข้าสู่บทเรียนทันที</span>
+              </Link>
+            ) : (
+              <button
+                onClick={handleEnroll}
+                disabled={enrolling}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl crimson-gradient text-white font-bold text-base hover:opacity-95 shadow-md shadow-rose-600/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {enrolling ? (
+                  <span>⏳ กำลังลงทะเบียน...</span>
+                ) : (
+                  <span>{course.price === 0 ? '🚀 ลงทะเบียนเรียนฟรี' : `💳 สั่งซื้อคอร์สนี้ ฿${course.price}`}</span>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <h2 className="text-xl font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+              <span>รายละเอียดคอร์ส</span>
+            </h2>
+            <p className="text-slate-600 text-base leading-relaxed whitespace-pre-line bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+              {course.description || 'ไม่มีรายละเอียดเพิ่มเติม'}
             </p>
           </div>
 
-          {/* ปุ่ม Action */}
-          <div className="mt-8">
-            {enrolled ? (
-              <div className="space-y-3">
-                <div className="bg-green-100 text-green-800 p-4 rounded-lg text-center font-semibold flex items-center justify-center gap-2">
-                  <span>✅</span>
-                  <span>คุณได้ลงทะเบียนคอร์สนี้แล้ว</span>
-                </div>
-                <Link 
-                  to={`/learn/${course.id}`}  // หน้าเรียน (ทำทีหลังได้)
-                  className="block w-full bg-blue-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition text-center"
+          {/* Curriculum */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+                <span>เนื้อหาบทเรียนทั้งหมด ({course.lessons?.length || 0} บท)</span>
+              </h2>
+
+              {isAdmin && (
+                <Link
+                  to={`/course/${course.id}/create-lesson`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100/70 border border-rose-200 px-3.5 py-2 rounded-xl transition"
                 >
-                  🎬 เข้าเรียนเลย
+                  <PlusCircle className="w-4 h-4" />
+                  <span>เพิ่มบทเรียน (Admin)</span>
                 </Link>
+              )}
+            </div>
+
+            {course.lessons && course.lessons.length > 0 ? (
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden bg-white">
+                {course.lessons.map((lesson, idx) => (
+                  <div
+                    key={lesson.id}
+                    className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-rose-50/30 transition"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <span className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 font-extrabold text-xs flex items-center justify-center shrink-0">
+                        {lesson.order || idx + 1}
+                      </span>
+                      <span className="font-bold text-slate-800 text-sm sm:text-base">
+                        {lesson.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
+                      <Clock className="w-4 h-4" />
+                      <span>{formatDuration(lesson.duration)}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              <button 
-                onClick={handleEnroll}
-                disabled={enrolling}
-                className="w-full bg-green-600 text-white py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {enrolling 
-                  ? '⏳ กำลังลงทะเบียน...' 
-                  : (course.price === 0 ? '🚀 ลงทะเบียนเรียนฟรี!' : `💳 ซื้อคอร์สนี้ ฿${course.price}`)
-                }
-              </button>
+              <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-500 text-sm">
+                ยังไม่มีบทเรียนในคอร์สนี้
+                {isAdmin && (
+                  <div className="mt-3">
+                    <Link
+                      to={`/course/${course.id}/create-lesson`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl crimson-gradient text-white text-xs font-bold shadow-xs hover:opacity-95"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      <span>คลิกเพื่อเพิ่มบทเรียนแรก</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

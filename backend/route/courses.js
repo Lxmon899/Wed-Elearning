@@ -20,6 +20,17 @@ router.get('/:id', async (req, res) => {
   try {
     const course = await prisma.course.findUnique({
       where: { id: parseInt(req.params.id) },
+      include: {
+        lessons: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            duration: true,
+            order: true,
+          },
+        },
+      },
     });
 
     if (!course) {
