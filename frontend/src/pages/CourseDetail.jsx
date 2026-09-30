@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Award,
   ArrowLeft,
+  HelpCircle,
 } from 'lucide-react';
 import { getCourse, enrollCourse, checkEnrollment } from '../api';
 
@@ -158,6 +159,49 @@ function CourseDetail() {
                 )}
               </button>
             )}
+          </div>
+
+          {/* Highlights Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-100/70 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-xs border border-rose-100">
+                <Play className="w-4 h-4 fill-rose-600" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">วิดีโอคุณภาพ</p>
+                <p className="text-[11px] text-slate-500">เรียนได้ทุกอุปกรณ์</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-100/70 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-xs border border-rose-100">
+                <HelpCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">แบบทดสอบ (Quiz)</p>
+                <p className="text-[11px] text-slate-500">วัดผลพร้อมเฉลย</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-100/70 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-xs border border-rose-100">
+                <Award className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">ใบประกาศนียบัตร</p>
+                <p className="text-[11px] text-slate-500">รับทันทีเมื่อจบ</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-100/70 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-xs border border-rose-100">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800">เข้าถึงตลอดชีพ</p>
+                <p className="text-[11px] text-slate-500">ทบทวนได้ตลอด</p>
+              </div>
+            </div>
           </div>
 
           {/* Description */}

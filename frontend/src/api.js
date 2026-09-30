@@ -41,6 +41,28 @@ export const createCourse = async (courseData) => {
   });
   return res.json();
 };
+
+export const updateCourse = async (id, courseData) => {
+  const res = await fetch(`${API_URL}/courses/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(courseData),
+  });
+  return res.json();
+};
+
+export const deleteCourse = async (id) => {
+  const res = await fetch(`${API_URL}/courses/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
+  });
+  return res.json();
+};
 // Enrollments
 export const enrollCourse = async (courseId) => {
   const res = await fetch(`${API_URL}/enrollments`, {
@@ -109,6 +131,13 @@ export const getCourseProgress = async (courseId) => {
   return res.json();
 };
 
+export const getLessonProgress = async (lessonId) => {
+  const res = await fetch(`${API_URL}/progress/lessons/${lessonId}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  return res.json();
+};
+
 // ==========================================
 // Upload
 // ==========================================
@@ -139,6 +168,77 @@ export const createLesson = async (courseId, lessonData) => {
       'Authorization': `Bearer ${getToken()}`,
     },
     body: JSON.stringify(lessonData),
+  });
+  return res.json();
+};
+
+// ==========================================
+// Quiz
+// ==========================================
+export const getCourseQuiz = async (courseId, manage = false) => {
+  const headers = {};
+  const token = getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const url = manage
+    ? `${API_URL}/courses/${courseId}/quiz?manage=true`
+    : `${API_URL}/courses/${courseId}/quiz`;
+  const res = await fetch(url, { headers });
+  return res.json();
+};
+
+export const submitCourseQuiz = async (courseId, answers) => {
+  const res = await fetch(`${API_URL}/courses/${courseId}/quiz/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ answers }),
+  });
+  return res.json();
+};
+
+export const getQuizAttempts = async (courseId) => {
+  const res = await fetch(`${API_URL}/courses/${courseId}/quiz/attempts`, {
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
+  });
+  return res.json();
+};
+
+export const createQuizQuestion = async (courseId, questionData) => {
+  const res = await fetch(`${API_URL}/courses/${courseId}/quiz/questions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(questionData),
+  });
+  return res.json();
+};
+
+export const updateQuizQuestion = async (questionId, questionData) => {
+  const res = await fetch(`${API_URL}/courses/quiz/questions/${questionId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(questionData),
+  });
+  return res.json();
+};
+
+export const deleteQuizQuestion = async (questionId) => {
+  const res = await fetch(`${API_URL}/courses/quiz/questions/${questionId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
   });
   return res.json();
 };

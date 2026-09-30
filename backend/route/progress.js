@@ -63,6 +63,15 @@ router.get('/courses/:id', auth, async (req, res) => {
             },
         });
 
+        // หาบทเรียนล่าสุดที่เข้าเรียน
+        const lastProgress = await prisma.progress.findFirst({
+            where: {
+                userId,
+                lesson: { courseId },
+            },
+            orderBy: { updatedAt: 'desc' },
+        });
+
         const percentage = totalLessons > 0
             ? Math.round((completedLessons / totalLessons) * 100)
             : 0;
@@ -71,9 +80,35 @@ router.get('/courses/:id', auth, async (req, res) => {
             totalLessons,
             completedLessons,
             percentage,
+            lastLesson: lastProgress ? { id: lastProgress.lessonId } : null,
         });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'ดึงข้อมูลไม่สำเร็จ' });
+    }
+});
+
+// ==========================================
+// GET /api/progress/lessons/:lessonId - ดึงความคืบหน้าของบทเรียน
+// ==========================================
+router.get('/lessons/:lessonId', auth, async (req, res) => {
+    try {
+        const lessonId = parseInt(req.params.lessonId);
+        const userId = req.user.id;
+
+        const progress = await prisma.progress.findUnique({
+            where: {
+                userId_lessonId: {
+                    userId,
+                    lessonId,
+                },
+            },
+        });
+
+        res.json(progress || { watchedSeconds: 0, completed: false });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'ดึงความคืบหน้าไม่สำเร็จ' });
     }
 });
 

@@ -8,14 +8,13 @@ import {
   Flame,
   User as UserIcon,
   LogOut,
-  PlusCircle,
   Menu,
   X,
   Award,
-  Users,
   Compass,
   CheckCircle2,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 import { useBookmarks } from '../context/BookmarkContext';
 
@@ -129,20 +128,17 @@ function Navbar({ onSearchChange, searchQuery = '' }) {
                 <BookOpen className="w-4 h-4" />
                 <span>My Learning</span>
               </Link>
-              <button
-                onClick={() => alert('🎓 คุณสะสมได้ 2 ใบรับรองหลักสูตร')}
-                className="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-rose-600 hover:bg-slate-50 transition flex items-center gap-2"
+              <Link
+                to="/certificates"
+                className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${
+                  location.pathname === '/certificates'
+                    ? 'text-rose-600 bg-rose-50'
+                    : 'text-slate-600 hover:text-rose-600 hover:bg-slate-50'
+                }`}
               >
                 <Award className="w-4 h-4" />
                 <span>Certificates</span>
-              </button>
-              <button
-                onClick={() => alert('💬 ฟอรัมแลกเปลี่ยนความคิดเห็นกำลังจะเปิดให้บริการเร็วๆ นี้!')}
-                className="px-3.5 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-rose-600 hover:bg-slate-50 transition flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                <span>Community</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -162,16 +158,7 @@ function Navbar({ onSearchChange, searchQuery = '' }) {
 
           {/* Right: User Action Bar */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Admin Add Course Button */}
-            {user?.role === 'admin' && (
-              <Link
-                to="/create-course"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white crimson-gradient hover:opacity-95 shadow-sm shadow-rose-600/30 transition"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                <span>สร้างคอร์สใหม่</span>
-              </Link>
-            )}
+
 
             {/* Streak Counter (Hidden on xs screens, accessible in mobile menu) */}
             <div
@@ -307,16 +294,14 @@ function Navbar({ onSearchChange, searchQuery = '' }) {
                         <BookOpen className="w-4 h-4 text-slate-400" />
                         <span>คอร์สเรียนของฉัน</span>
                       </Link>
-                      {user.role === 'admin' && (
-                        <Link
-                          to="/create-course"
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50 rounded-lg transition"
-                        >
-                          <PlusCircle className="w-4 h-4 text-purple-600" />
-                          <span>สร้างคอร์สใหม่ (Admin)</span>
-                        </Link>
-                      )}
+                      <Link
+                        to="/instructor"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg transition"
+                      >
+                        <Layers className="w-4 h-4 text-rose-600" />
+                        <span>แดชบอร์ดผู้สอน (Instructor Hub)</span>
+                      </Link>
                     </div>
 
                     <div className="pt-1 border-t border-slate-100">
@@ -433,25 +418,23 @@ function Navbar({ onSearchChange, searchQuery = '' }) {
                 )}
               </button>
 
-              <button
-                onClick={() => {
-                  alert('🎓 คุณสะสมได้ 2 ใบรับรองหลักสูตร');
-                  setMobileMenuOpen(false);
-                }}
+              <Link
+                to="/certificates"
+                onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition text-left"
               >
                 <Award className="w-5 h-5 text-rose-500" />
                 <span>ใบรับรอง (Certificates)</span>
-              </button>
+              </Link>
 
-              {user?.role === 'admin' && (
+              {user && (
                 <Link
-                  to="/create-course"
+                  to="/instructor"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm text-purple-700 bg-purple-50 hover:bg-purple-100/70 transition"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold text-sm text-rose-700 bg-rose-50 hover:bg-rose-100/70 transition"
                 >
-                  <PlusCircle className="w-5 h-5 text-purple-600" />
-                  <span>สร้างคอร์สใหม่ (Admin Studio)</span>
+                  <Layers className="w-5 h-5 text-rose-600" />
+                  <span>แดชบอร์ดผู้สอน (Instructor Hub)</span>
                 </Link>
               )}
             </div>

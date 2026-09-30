@@ -129,6 +129,7 @@ function Home({ externalSearchQuery = '' }) {
 
   // Filter & Search states
   const [selectedCategory, setSelectedCategory] = useState('All Courses');
+  const [filterBookmarkedOnly, setFilterBookmarkedOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState(externalSearchQuery);
   const [sortBy, setSortBy] = useState('popular');
   const [selectedPreviewCourse, setSelectedPreviewCourse] = useState(null);
@@ -193,6 +194,10 @@ function Home({ externalSearchQuery = '' }) {
   const filteredCourses = useMemo(() => {
     return allCourses
       .filter((course) => {
+        // Bookmarked only filter
+        if (filterBookmarkedOnly && !isBookmarked(course.id)) {
+          return false;
+        }
         // Category filter
         if (selectedCategory !== 'All Courses' && course.category !== selectedCategory) {
           return false;
@@ -215,7 +220,7 @@ function Home({ externalSearchQuery = '' }) {
         if (sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
         return 0;
       });
-  }, [allCourses, selectedCategory, searchQuery, sortBy]);
+  }, [allCourses, selectedCategory, filterBookmarkedOnly, searchQuery, sortBy, isBookmarked]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
@@ -252,29 +257,32 @@ function Home({ externalSearchQuery = '' }) {
               </p>
 
               {/* Quick Stats Widget */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 max-w-lg">
-                <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl border border-rose-100 crimson-shadow min-w-0">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3.5 pt-3 max-w-xl">
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border border-rose-100 crimson-shadow min-w-0 transition hover:border-rose-300">
                   <div className="flex items-center gap-1.5 text-rose-600 mb-1">
-                    <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 truncate">ชั่วโมงเรียน</span>
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Total Hours</span>
                   </div>
-                  <p className="text-sm sm:text-lg font-extrabold text-slate-900 truncate">24.5 ชม.</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">24.5 ชม.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">เวลาเรียนสะสมทั้งหมด</p>
                 </div>
 
-                <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl border border-rose-100 crimson-shadow min-w-0">
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border border-rose-100 crimson-shadow min-w-0 transition hover:border-rose-300">
                   <div className="flex items-center gap-1.5 text-rose-600 mb-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 truncate">จบคอร์ส</span>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Completed</span>
                   </div>
-                  <p className="text-sm sm:text-lg font-extrabold text-slate-900 truncate">3 คอร์ส</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">3 คอร์ส</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">ผ่านการเรียนสำเร็จ</p>
                 </div>
 
-                <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl border border-rose-100 crimson-shadow min-w-0">
+                <div className="bg-white p-3 sm:p-4 rounded-2xl border border-rose-100 crimson-shadow min-w-0 transition hover:border-rose-300">
                   <div className="flex items-center gap-1.5 text-rose-600 mb-1">
-                    <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 truncate">Streak</span>
+                    <Award className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Certificates</span>
                   </div>
-                  <p className="text-sm sm:text-lg font-extrabold text-slate-900 truncate">5 วัน 🔥</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">2 ใบรับรอง</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">ประกาศนียบัตรที่ได้รับ</p>
                 </div>
               </div>
             </div>
@@ -288,9 +296,12 @@ function Home({ externalSearchQuery = '' }) {
                   <div className="flex items-center justify-between mb-4">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
                       <Play className="w-3 h-3 fill-rose-600 text-rose-600" />
-                      <span>เรียนต่อจากเดิม</span>
+                      <span>เรียนต่อจากเดิม (Active Course)</span>
                     </span>
-                    <span className="text-xs text-slate-400 font-semibold">เมื่อวานนี้</span>
+                    <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>รับชมล่าสุด 2 ชม. ที่แล้ว</span>
+                    </span>
                   </div>
 
                   {activeCourse ? (
@@ -301,7 +312,7 @@ function Home({ externalSearchQuery = '' }) {
                           alt={activeCourse.title}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
                           <span className="text-white text-xs font-bold truncate">
                             {activeCourse.title}
                           </span>
@@ -310,7 +321,7 @@ function Home({ externalSearchQuery = '' }) {
 
                       <div>
                         <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className="text-slate-700">บทที่ 3: State และ Lifecycle</span>
+                          <span className="text-slate-700">บทที่ 3: State & Lifecycle Management</span>
                           <span className="text-rose-600">68%</span>
                         </div>
                         <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -318,6 +329,10 @@ function Home({ externalSearchQuery = '' }) {
                             className="crimson-gradient h-full rounded-full transition-all duration-500"
                             style={{ width: '68%' }}
                           />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                          <span>ความคืบหน้าบทเรียน 68%</span>
+                          <span>Timestamp: 18:42 / 27:30</span>
                         </div>
                       </div>
                     </div>
@@ -329,30 +344,34 @@ function Home({ externalSearchQuery = '' }) {
                           alt="React course"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
                           <span className="text-white text-xs font-bold truncate">
-                            React สำหรับมือใหม่
+                            React สำหรับมือใหม่ (Beginner Course)
                           </span>
                         </div>
                       </div>
 
                       <div>
                         <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className="text-slate-700">บทที่ 2: JSX และ Component</span>
-                          <span className="text-rose-600">45%</span>
+                          <span className="text-slate-700">บทที่ 2: JSX, Component & Props</span>
+                          <span className="text-rose-600">68%</span>
                         </div>
                         <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                           <div
                             className="crimson-gradient h-full rounded-full"
-                            style={{ width: '45%' }}
+                            style={{ width: '68%' }}
                           />
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                          <span>ความคืบหน้าบทเรียน 68%</span>
+                          <span>Timestamp: 12:15 / 18:00</span>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="pt-5 mt-4 border-t border-slate-100">
+                <div className="pt-4 mt-3 border-t border-slate-100">
                   <button
                     onClick={() => {
                       if (activeCourse) {
@@ -361,7 +380,7 @@ function Home({ externalSearchQuery = '' }) {
                         navigate('/learn/4');
                       }
                     }}
-                    className="w-full py-3 px-4 rounded-xl crimson-gradient text-white font-bold text-sm hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 rounded-xl crimson-gradient text-white font-bold text-sm hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span>เรียนต่อทันที (Continue Lesson)</span>
                     <ArrowRight className="w-4 h-4" />
@@ -403,30 +422,33 @@ function Home({ externalSearchQuery = '' }) {
             <div className="flex items-center justify-between sm:justify-start gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm shadow-xs">
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-400 sm:hidden">เรียงตาม:</span>
+                <span className="text-xs text-slate-400 sm:hidden">Sort by:</span>
               </div>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="bg-transparent font-semibold text-slate-700 outline-none text-xs sm:text-sm cursor-pointer"
               >
-                <option value="popular">ยอดนิยมสูงสุด</option>
-                <option value="rating">คะแนนรีวิวสูงสุด</option>
-                <option value="newest">คอร์สมาใหม่</option>
-                <option value="price_asc">คอร์สฟรี / ราคาต่ำสุด</option>
+                <option value="popular">Most Popular (ยอดนิยมสูงสุด)</option>
+                <option value="newest">Newest (คอร์สมาใหม่)</option>
+                <option value="rating">Highest Rated (คะแนนรีวิวสูงสุด)</option>
+                <option value="price_asc">Free & Lowest Price (ราคาต่ำสุด)</option>
               </select>
             </div>
           </div>
         </div>
 
-        {/* 3. Category Tabs (Pills) */}
+        {/* 3. Category Tabs (Pills) & Bookmarked Filter */}
         <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => {
+                setSelectedCategory(cat);
+                setFilterBookmarkedOnly(false);
+              }}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer ${
-                selectedCategory === cat
+                !filterBookmarkedOnly && selectedCategory === cat
                   ? 'crimson-gradient text-white shadow-md shadow-rose-600/20'
                   : 'bg-white border border-slate-200 text-slate-600 hover:border-rose-300 hover:bg-rose-50/50'
               }`}
@@ -434,11 +456,27 @@ function Home({ externalSearchQuery = '' }) {
               {cat}
             </button>
           ))}
+
+          {/* Dedicated Bookmark Filter Pill */}
+          <button
+            onClick={() => setFilterBookmarkedOnly(!filterBookmarkedOnly)}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              filterBookmarkedOnly
+                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                : 'bg-white border border-slate-200 text-slate-600 hover:border-rose-300 hover:bg-rose-50/50'
+            }`}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${filterBookmarkedOnly ? 'fill-white text-white' : 'text-rose-500'}`} />
+            <span>ที่บันทึกไว้ (Bookmarked)</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${filterBookmarkedOnly ? 'bg-white text-rose-600' : 'bg-rose-100 text-rose-700'}`}>
+              {allCourses.filter(c => isBookmarked(c.id)).length}
+            </span>
+          </button>
         </div>
 
-        {/* 4. Course Catalog Grid */}
+        {/* 4. Course Catalog Grid (1 col on mobile, 2 on tablet, 3-4 on desktop) */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-4">
             {[1, 2, 3, 4, 5, 6].map((idx) => (
               <div
                 key={idx}
@@ -457,7 +495,7 @@ function Home({ externalSearchQuery = '' }) {
             <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 mx-auto flex items-center justify-center mb-4">
               <Search className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800">ไม่พบคอร์สเรียนที่ตรงกับคำค้นหา</h3>
+            <h3 className="text-lg font-bold text-slate-800">ไม่พบคอร์สเรียนที่ตรงกับเงื่อนไข</h3>
             <p className="text-slate-500 text-sm mt-1">
               ลองเปลี่ยนคำค้นหา หรือรีเซ็ตตัวกรองเพื่อดูคอร์สทั้งหมด
             </p>
@@ -465,14 +503,15 @@ function Home({ externalSearchQuery = '' }) {
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('All Courses');
+                setFilterBookmarkedOnly(false);
               }}
-              className="mt-4 px-5 py-2.5 rounded-xl crimson-gradient text-white font-bold text-sm shadow-sm"
+              className="mt-4 px-5 py-2.5 rounded-xl crimson-gradient text-white font-bold text-sm shadow-sm cursor-pointer"
             >
               ล้างตัวกรองทั้งหมด
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pt-4">
             {filteredCourses.map((course) => {
               const bookmarked = isBookmarked(course.id);
 
@@ -481,8 +520,11 @@ function Home({ externalSearchQuery = '' }) {
                   key={course.id}
                   className="bg-white rounded-3xl border border-rose-100/80 overflow-hidden crimson-shadow crimson-shadow-hover flex flex-col group"
                 >
-                  {/* Card Thumbnail Area */}
-                  <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-900">
+                  {/* Card Thumbnail Area with Category Badge Overlay */}
+                  <div 
+                    onClick={() => setSelectedPreviewCourse(course)}
+                    className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-900 cursor-pointer"
+                  >
                     <img
                       src={course.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800'}
                       alt={course.title}
@@ -492,18 +534,18 @@ function Home({ externalSearchQuery = '' }) {
 
                     {/* Category Badge */}
                     <div className="absolute top-3.5 left-3.5">
-                      <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-white/90 backdrop-blur-md text-slate-800 shadow-sm">
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 backdrop-blur-md text-slate-800 shadow-sm border border-slate-100">
                         {course.category}
                       </span>
                     </div>
 
-                    {/* Bookmark Toggle Button */}
+                    {/* Interactive Bookmark Toggle Button */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleBookmark(course.id);
                       }}
-                      className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-slate-600 hover:text-rose-600 hover:scale-110 transition shadow-sm"
+                      className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-slate-600 hover:text-rose-600 hover:scale-110 transition shadow-sm cursor-pointer"
                       title={bookmarked ? 'ลบบุ๊กมาร์ก' : 'บันทึกคอร์สนี้'}
                     >
                       <Bookmark
@@ -511,13 +553,13 @@ function Home({ externalSearchQuery = '' }) {
                       />
                     </button>
 
-                    {/* Level & Price on Thumbnail Bottom */}
+                    {/* Level Tag & Price Badge on Thumbnail Bottom */}
                     <div className="absolute bottom-3 left-3.5 right-3.5 flex items-center justify-between text-white">
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md">
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/20">
                         {course.level}
                       </span>
-                      <span className="text-sm font-black text-rose-300 drop-shadow">
-                        {course.price === 0 ? 'คอร์สฟรี' : `฿${course.price}`}
+                      <span className="text-sm font-black text-white px-2 py-0.5 rounded-lg bg-rose-600/90 backdrop-blur-sm shadow-xs">
+                        {course.price === 0 ? 'เรียนฟรี' : `฿${course.price}`}
                       </span>
                     </div>
                   </div>
@@ -525,7 +567,7 @@ function Home({ externalSearchQuery = '' }) {
                   {/* Card Body Content */}
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                     <div className="space-y-2.5">
-                      {/* Rating & Duration */}
+                      {/* Rating Stars with Review Count & Total Duration */}
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <div className="flex items-center gap-1.5 font-bold text-slate-700">
                           <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -540,8 +582,11 @@ function Home({ externalSearchQuery = '' }) {
                         </div>
                       </div>
 
-                      {/* Title */}
-                      <h3 className="font-extrabold text-base text-slate-900 group-hover:text-rose-600 transition line-clamp-2 leading-snug">
+                      {/* Course Title */}
+                      <h3 
+                        onClick={() => setSelectedPreviewCourse(course)}
+                        className="font-extrabold text-base text-slate-900 group-hover:text-rose-600 transition line-clamp-2 leading-snug cursor-pointer"
+                      >
                         {course.title}
                       </h3>
 
@@ -563,19 +608,20 @@ function Home({ externalSearchQuery = '' }) {
                         </span>
                       </div>
 
-                      {/* Action Buttons */}
+                      {/* Action Buttons: View Syllabus / Enroll */}
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => setSelectedPreviewCourse(course)}
-                          className="w-full py-2 px-3 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50/50 text-slate-700 text-xs font-bold transition text-center"
+                          className="w-full py-2 px-3 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50/50 text-slate-700 text-xs font-bold transition text-center cursor-pointer flex items-center justify-center gap-1"
                         >
-                          ดูหลักสูตร (Syllabus)
+                          <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                          <span>View Syllabus</span>
                         </button>
                         <Link
                           to={`/course/${course.id}`}
-                          className="w-full py-2 px-3 rounded-xl crimson-gradient hover:opacity-95 text-white text-xs font-bold transition text-center shadow-xs flex items-center justify-center gap-1"
+                          className="w-full py-2 px-3 rounded-xl crimson-gradient hover:opacity-95 text-white text-xs font-bold transition text-center shadow-xs flex items-center justify-center gap-1 cursor-pointer"
                         >
-                          <span>เข้าสู่คอร์ส</span>
+                          <span>Enroll</span>
                           <ArrowRight className="w-3 h-3" />
                         </Link>
                       </div>

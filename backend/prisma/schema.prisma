@@ -14,8 +14,9 @@ model User {
   role      String   @default("student")
   createdAt DateTime @default(now()) @map("created_at")
 
-  enrollments Enrollment[]
-  progresses  Progress[]
+  enrollments  Enrollment[]
+  progresses   Progress[]
+  quizAttempts QuizAttempt[]
   
   @@map("users")
 }
@@ -29,8 +30,10 @@ model Course {
   price       Float    @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
 
-  enrollments Enrollment[]
-  lessons     Lesson[]
+  enrollments  Enrollment[]
+  lessons      Lesson[]
+  questions    Question[]
+  quizAttempts QuizAttempt[]
   
   @@map("courses")
 }
@@ -45,6 +48,7 @@ model Lesson {
 
   course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   progresses Progress[]
+  questions  Question[]
   
   @@map("lessons")
 }
@@ -75,4 +79,47 @@ model Progress {
 
   @@unique([userId, lessonId])
   @@map("progresses")
+}
+
+model Question {
+  id          Int      @id @default(autoincrement())
+  courseId    Int      @map("course_id")
+  lessonId    Int?     @map("lesson_id")
+  text        String   // คำถาม
+  explanation String?  // คำอธิบายเฉลย
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson  Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  choices Choice[]
+
+  @@map("questions")
+}
+
+model Choice {
+  id         Int     @id @default(autoincrement())
+  questionId Int     @map("question_id")
+  text       String  // ตัวเลือกคำตอบ
+  isCorrect  Boolean @default(false) @map("is_correct")
+  order      Int     @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("choices")
+}
+
+model QuizAttempt {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  courseId       Int      @map("course_id")
+  score          Int      // คะแนนที่ได้
+  totalQuestions Int      @map("total_questions")
+  passed         Boolean  @default(false)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_attempts")
 }

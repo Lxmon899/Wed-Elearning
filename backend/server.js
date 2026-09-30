@@ -7,6 +7,7 @@ const enrollmentRoutes = require('./route/enrollments');
 const lessonRoutes = require('./route/lessons');
 const progressRoutes = require('./route/progress');
 const uploadRoutes = require('./route/upload');
+const quizRoutes = require('./route/quiz');
 
 const app = express();
 const PORT = 3001;
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/courses', lessonRoutes);
+app.use('/api/courses', quizRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/upload', uploadRoutes);
 
