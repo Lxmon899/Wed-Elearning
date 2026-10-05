@@ -27,6 +27,7 @@ model Course {
   instructor  String
   thumbnail   String?
   price       Float    @default(0)
+  duration    String?  @default("3 ชม. 30 นาที")
   createdAt   DateTime @default(now()) @map("created_at")
 
   enrollments Enrollment[]
@@ -38,7 +39,11 @@ model Enrollment {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   courseId  Int      @map("course_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  status         String   @default("in_progress")
+  progress       Int      @default(0)
+  isReviewing    Boolean  @default(false) @map("is_reviewing")
+  reviewProgress Int      @default(0) @map("review_progress")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   user   User   @relation(fields: [userId], references: [id])
   course Course @relation(fields: [courseId], references: [id])
