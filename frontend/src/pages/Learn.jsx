@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Award, HelpCircle } from 'lucide-react';
+import { Award, HelpCircle, Edit3 } from 'lucide-react';
 import { getLessons, updateProgress, getCourseProgress, getLessonProgress, getCourse } from '../api';
 import ProgressBar from '../components/ProgressBar';
 import CertificateModal from '../components/CertificateModal';
 import QuizModal from '../components/QuizModal';
+import EditLessonModal from '../components/EditLessonModal';
 
 function Learn() {
     const { id } = useParams();
@@ -14,6 +15,7 @@ function Learn() {
     const [course, setCourse] = useState(null);
     const [showCertModal, setShowCertModal] = useState(false);
     const [showQuizModal, setShowQuizModal] = useState(false);
+    const [editingLesson, setEditingLesson] = useState(null);
     const [lessons, setLessons] = useState([]);
     const [currentLesson, setCurrentLesson] = useState(null);
     const [courseProgress, setCourseProgress] = useState({ percentage: 0, completedLessons: 0, totalLessons: 0 });
@@ -185,6 +187,16 @@ function Learn() {
             });
     };
 
+    // สลับสถานะการเรียนจบของบทเรียน (กดคลิกที่ไอคอนถูก/ผิด)
+    const toggleLessonCompleted = async (lesson, e) => {
+        if (e) e.stopPropagation();
+        const newCompleted = !lesson.completed;
+        setLessons(prev => prev.map(l => l.id === lesson.id ? { ...l, completed: newCompleted } : l));
+        
+        await updateProgress(lesson.id, lesson.watchedSeconds || 0, newCompleted, true);
+        fetchCourseProgress();
+    };
+
     // ไปบทถัดไป
     const goToNextLesson = () => {
         const idx = lessons.findIndex(l => l.id === currentLesson.id);
@@ -274,24 +286,36 @@ function Learn() {
                 {/* Info + Navigation */}
                 <div className="bg-gray-800 p-4 border-t border-gray-700">
                     <div className="flex justify-between items-start mb-2">
-                        <div>
-                            <h2 className="text-xl font-bold">{currentLesson.title}</h2>
-                            <p className="text-gray-400 text-sm">
+                        <div className="flex-1 mr-4">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-xl font-bold">{currentLesson.title}</h2>
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={() => setEditingLesson(currentLesson)}
+                                        className="px-2.5 py-1 text-xs font-bold text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-600 border border-rose-500/40 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                                        title="แก้ไขบทเรียนนี้"
+                                    >
+                                        <Edit3 className="w-3.5 h-3.5" />
+                                        <span>แก้ไขบทเรียน</span>
+                                    </button>
+                                )}
+                            </div>
+                            <p className="text-gray-400 text-sm mt-0.5">
                                 บทที่ {currentLesson.order} • {lessons.length} บทเรียน
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 shrink-0">
                             <button
                                 onClick={goToPrevLesson}
                                 disabled={currentIndex === 0}
-                                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-30 hover:bg-gray-600"
+                                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-30 hover:bg-gray-600 cursor-pointer"
                             >
                                 ← ก่อนหน้า
                             </button>
                             <button
                                 onClick={goToNextLesson}
                                 disabled={currentIndex === lessons.length - 1}
-                                className="px-4 py-2 bg-blue-600 rounded-lg disabled:opacity-30 hover:bg-blue-500"
+                                className="px-4 py-2 bg-rose-600 rounded-lg disabled:opacity-30 hover:bg-rose-500 cursor-pointer"
                             >
                                 ถัดไป →
                             </button>
@@ -308,15 +332,20 @@ function Learn() {
 
                 <div className="overflow-y-auto flex-1">
                     {lessons.map((lesson, idx) => (
-                        <button
+                        <div
                             key={lesson.id}
                             onClick={() => switchLesson(lesson)}
-                            className={`w-full text-left p-4 border-b border-gray-700 flex items-start gap-3 transition hover:bg-gray-700 ${currentLesson.id === lesson.id ? 'bg-gray-700 border-l-4 border-l-blue-500' : ''
+                            className={`w-full text-left p-4 border-b border-gray-700 flex items-start gap-3 transition cursor-pointer hover:bg-gray-700 ${currentLesson.id === lesson.id ? 'bg-gray-700 border-l-4 border-l-blue-500' : ''
                                 }`}
                         >
-                            <div className="mt-1 text-lg">
+                            <button
+                                type="button"
+                                onClick={(e) => toggleLessonCompleted(lesson, e)}
+                                title={lesson.completed ? 'ทำเครื่องหมายว่ายังเรียนไม่จบ' : 'ทำเครื่องหมายว่าเรียนจบแล้ว'}
+                                className="mt-0.5 text-lg hover:scale-125 transition-transform cursor-pointer p-0.5 rounded focus:outline-none"
+                            >
                                 {lesson.completed ? '✅' : '⭕'}
-                            </div>
+                            </button>
 
                             <div className="flex-1 min-w-0">
                                 <p className={`font-medium text-sm ${currentLesson.id === lesson.id ? 'text-blue-400' : ''}`}>
@@ -326,7 +355,7 @@ function Learn() {
                                     {lesson.duration ? formatTime(lesson.duration) : 'ไม่ระบุ'}
                                 </p>
                             </div>
-                        </button>
+                        </div>
                     ))}
                 </div>
 
@@ -358,6 +387,22 @@ function Learn() {
                     courseTitle={course?.title || currentLesson?.title}
                     onClose={() => setShowQuizModal(false)}
                     onPassQuiz={() => {}}
+                />
+            )}
+
+            {/* Edit Lesson Modal */}
+            {editingLesson && (
+                <EditLessonModal
+                    isOpen={!!editingLesson}
+                    onClose={() => setEditingLesson(null)}
+                    lesson={editingLesson}
+                    onSuccess={(updated) => {
+                        setEditingLesson(null);
+                        setLessons((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+                        if (currentLesson?.id === updated.id) {
+                            setCurrentLesson((prev) => ({ ...prev, ...updated }));
+                        }
+                    }}
                 />
             )}
         </div>

@@ -21,7 +21,12 @@ import {
   ArrowRight,
   TrendingUp,
   Award,
-  DollarSign
+  DollarSign,
+  ArrowUp,
+  ArrowDown,
+  Clock,
+  Film,
+  UploadCloud,
 } from 'lucide-react';
 import { 
   getCourses, 
@@ -31,8 +36,15 @@ import {
   getCourseQuiz, 
   createQuizQuestion,
   updateQuizQuestion,
-  deleteQuizQuestion
+  deleteQuizQuestion,
+  getLessons,
+  createLesson,
+  updateLesson,
+  deleteLesson,
+  reorderLessons,
+  uploadVideo
 } from '../api';
+import EditLessonModal from '../components/EditLessonModal';
 
 const SAMPLE_THUMBNAILS = [
   {
@@ -106,6 +118,26 @@ export default function InstructorDashboard() {
   const [deletingQuestion, setDeletingQuestion] = useState(null);
   const [questionActionLoading, setQuestionActionLoading] = useState(false);
 
+  // Lesson Management state
+  const courseIdParam = searchParams.get('courseId');
+  const [selectedLessonCourseId, setSelectedLessonCourseId] = useState(
+    courseIdParam ? parseInt(courseIdParam) : null
+  );
+  const [lessonsList, setLessonsList] = useState([]);
+  const [loadingLessons, setLoadingLessons] = useState(false);
+  const [newLessonTitle, setNewLessonTitle] = useState('');
+  const [newLessonVideoUrl, setNewLessonVideoUrl] = useState('');
+  const [newLessonDuration, setNewLessonDuration] = useState(0);
+  const [newLessonVideoFile, setNewLessonVideoFile] = useState(null);
+  const [newLessonVideoPreview, setNewLessonVideoPreview] = useState('');
+  const [newLessonUploading, setNewLessonUploading] = useState(false);
+  const [submittingLesson, setSubmittingLesson] = useState(false);
+
+  // Lesson Modals state
+  const [editingLesson, setEditingLesson] = useState(null);
+  const [deletingLesson, setDeletingLesson] = useState(null);
+  const [lessonActionLoading, setLessonActionLoading] = useState(false);
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -120,8 +152,9 @@ export default function InstructorDashboard() {
       const data = await getCourses();
       if (!data.error) {
         setCourses(data);
-        if (data.length > 0 && !selectedQuizCourseId) {
-          setSelectedQuizCourseId(data[0].id);
+        if (data.length > 0) {
+          if (!selectedQuizCourseId) setSelectedQuizCourseId(data[0].id);
+          if (!selectedLessonCourseId) setSelectedLessonCourseId(data[0].id);
         }
       }
     } catch (err) {
@@ -151,6 +184,130 @@ export default function InstructorDashboard() {
       console.error(err);
     } finally {
       setLoadingQuiz(false);
+    }
+  };
+
+  // Load lessons when lesson course changes or activeTab becomes 'lessons'
+  useEffect(() => {
+    if (selectedLessonCourseId && activeTab === 'lessons') {
+      loadLessonsForCourse(selectedLessonCourseId);
+    }
+  }, [selectedLessonCourseId, activeTab]);
+
+  const loadLessonsForCourse = async (courseId) => {
+    try {
+      setLoadingLessons(true);
+      const data = await getLessons(courseId, true);
+      if (Array.isArray(data)) {
+        setLessonsList(data);
+      } else {
+        setLessonsList([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setLessonsList([]);
+    } finally {
+      setLoadingLessons(false);
+    }
+  };
+
+  const handleCreateNewLesson = async (e) => {
+    e.preventDefault();
+    if (!selectedLessonCourseId) return;
+    if (!newLessonTitle.trim()) {
+      alert('กรุณากรอกชื่อบทเรียน');
+      return;
+    }
+
+    let finalVideoUrl = newLessonVideoUrl;
+    if (newLessonVideoFile) {
+      setNewLessonUploading(true);
+      try {
+        const upRes = await uploadVideo(newLessonVideoFile);
+        if (upRes.videoUrl) {
+          finalVideoUrl = upRes.videoUrl;
+        } else {
+          alert(upRes.error || 'อัปโหลดวิดีโอไม่สำเร็จ');
+          setNewLessonUploading(false);
+          return;
+        }
+      } catch {
+        alert('เกิดข้อผิดพลาดในการอัปโหลดวิดีโอ');
+        setNewLessonUploading(false);
+        return;
+      } finally {
+        setNewLessonUploading(false);
+      }
+    }
+
+    if (!finalVideoUrl || !finalVideoUrl.trim()) {
+      alert('กรุณาเลือกไฟล์วิดีโอ หรือระบุ Video URL');
+      return;
+    }
+
+    try {
+      setSubmittingLesson(true);
+      const res = await createLesson(selectedLessonCourseId, {
+        title: newLessonTitle.trim(),
+        videoUrl: finalVideoUrl.trim(),
+        duration: newLessonDuration || null,
+        order: lessonsList.length + 1,
+      });
+
+      if (res.lesson) {
+        setNewLessonTitle('');
+        setNewLessonVideoUrl('');
+        setNewLessonVideoFile(null);
+        setNewLessonVideoPreview('');
+        setNewLessonDuration(0);
+        await loadLessonsForCourse(selectedLessonCourseId);
+        await loadCourses();
+      } else {
+        alert(res.error || 'สร้างบทเรียนไม่สำเร็จ');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการสร้างบทเรียน');
+    } finally {
+      setSubmittingLesson(false);
+    }
+  };
+
+  const handleDeleteLesson = async () => {
+    if (!deletingLesson) return;
+    try {
+      setLessonActionLoading(true);
+      const res = await deleteLesson(deletingLesson.id);
+      if (!res.error) {
+        setDeletingLesson(null);
+        await loadLessonsForCourse(selectedLessonCourseId);
+        await loadCourses();
+      } else {
+        alert(res.error || 'ลบบทเรียนไม่สำเร็จ');
+      }
+    } catch {
+      alert('เกิดข้อผิดพลาดในการลบบทเรียน');
+    } finally {
+      setLessonActionLoading(false);
+    }
+  };
+
+  const handleMoveLessonOrder = async (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= lessonsList.length) return;
+
+    const newLessons = [...lessonsList];
+    const [moved] = newLessons.splice(index, 1);
+    newLessons.splice(targetIndex, 0, moved);
+
+    // Optimistic update
+    setLessonsList(newLessons);
+
+    try {
+      const orderedIds = newLessons.map((l) => l.id);
+      await reorderLessons(selectedLessonCourseId, orderedIds);
+    } catch (err) {
+      console.error(err);
+      loadLessonsForCourse(selectedLessonCourseId);
     }
   };
 
@@ -532,6 +689,21 @@ export default function InstructorDashboard() {
 
         <button
           onClick={() => {
+            setActiveTab('lessons');
+            setSearchParams({ tab: 'lessons', ...(selectedLessonCourseId && { courseId: selectedLessonCourseId }) });
+          }}
+          className={`px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition flex items-center gap-2 shrink-0 cursor-pointer ${
+            activeTab === 'lessons'
+              ? 'bg-rose-600 text-white shadow-sm shadow-rose-600/30'
+              : 'bg-white text-slate-600 hover:text-rose-600 hover:bg-rose-50/50 border border-slate-200'
+          }`}
+        >
+          <Film className="w-4 h-4" />
+          <span>จัดการบทเรียน ({stats.totalLessons} ตอน)</span>
+        </button>
+
+        <button
+          onClick={() => {
             setActiveTab('quiz');
             setSearchParams({ tab: 'quiz' });
           }}
@@ -663,21 +835,25 @@ export default function InstructorDashboard() {
 
                       {/* Action Buttons */}
                       <div className="space-y-2 pt-2 border-t border-slate-100">
-                        {/* Primary: Add Lesson & Manage Quiz */}
+                        {/* Primary: Manage Lessons & Manage Quiz */}
                         <div className="grid grid-cols-2 gap-2">
-                          <Link
-                            to={`/course/${course.id}/create-lesson`}
-                            className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-rose-200/70"
+                          <button
+                            onClick={() => {
+                              setSelectedLessonCourseId(course.id);
+                              setActiveTab('lessons');
+                              setSearchParams({ tab: 'lessons', courseId: course.id });
+                            }}
+                            className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-rose-200/70 cursor-pointer"
                           >
-                            <Video className="w-3.5 h-3.5" />
-                            <span>+ เพิ่มบทเรียน</span>
-                          </Link>
+                            <Film className="w-3.5 h-3.5" />
+                            <span>🎬 จัดการบทเรียน ({lessonCount})</span>
+                          </button>
 
                           <button
                             onClick={() => {
                               setSelectedQuizCourseId(course.id);
                               setActiveTab('quiz');
-                              setSearchParams({ tab: 'quiz' });
+                              setSearchParams({ tab: 'quiz', courseId: course.id });
                             }}
                             className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-emerald-200/70 cursor-pointer"
                           >
@@ -933,6 +1109,246 @@ export default function InstructorDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB: LESSONS MANAGER ================= */}
+      {activeTab === 'lessons' && (
+        <div className="space-y-8">
+          {/* Course Selector for Lessons */}
+          <div className="bg-white p-5 rounded-3xl border border-rose-100/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-extrabold text-base text-slate-900">เลือกหลักสูตรที่ต้องการจัดการบทเรียน</h3>
+              <p className="text-xs text-slate-500">เลือกคอร์สเพื่อดู แก้ไข สลับลำดับ หรือเพิ่มบทเรียนวิดีโอใหม่</p>
+            </div>
+
+            <select
+              value={selectedLessonCourseId || ''}
+              onChange={(e) => {
+                const cId = parseInt(e.target.value);
+                setSelectedLessonCourseId(cId);
+                setSearchParams({ tab: 'lessons', courseId: cId });
+              }}
+              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 transition cursor-pointer"
+            >
+              {courses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title} ({c._count?.lessons || 0} ตอน)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Col: List of Lessons */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                  <Film className="w-4 h-4 text-rose-600" />
+                  <span>รายการบทเรียนทั้งหมด ({lessonsList.length} ตอน)</span>
+                </h4>
+                <span className="text-[11px] text-slate-400">
+                  กด ▲ ▼ เพื่อสลับลำดับบทเรียน
+                </span>
+              </div>
+
+              {loadingLessons ? (
+                <div className="text-center py-12 text-slate-400 bg-white rounded-3xl border border-rose-100">
+                  <div className="w-8 h-8 border-3 border-rose-200 border-t-rose-600 rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-xs font-medium">กำลังโหลดบทเรียน...</p>
+                </div>
+              ) : lessonsList.length === 0 ? (
+                <div className="text-center py-12 px-4 bg-white rounded-3xl border border-rose-100 shadow-xs">
+                  <Film className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                  <p className="font-bold text-sm text-slate-800">ยังไม่มีบทเรียนในคอร์สนี้</p>
+                  <p className="text-xs text-slate-500 mt-1">ใช้ฟอร์มด้านขวาเพื่อเพิ่มบทเรียนวิดีโอตอนแรก</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {lessonsList.map((lesson, idx) => (
+                    <div
+                      key={lesson.id}
+                      className="p-4 sm:p-5 rounded-2xl bg-white border border-rose-100 shadow-xs hover:border-rose-300/80 transition space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {/* Order Reorder Controls */}
+                          <div className="flex flex-col items-center gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => handleMoveLessonOrder(idx, -1)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed transition"
+                              title="เลื่อนขึ้น"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="w-6 h-6 rounded-lg bg-rose-50 text-rose-700 font-extrabold text-xs flex items-center justify-center border border-rose-200">
+                              {lesson.order || idx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={idx === lessonsList.length - 1}
+                              onClick={() => handleMoveLessonOrder(idx, 1)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed transition"
+                              title="เลื่อนลง"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h5 className="font-bold text-sm text-slate-900 truncate">
+                              {lesson.title}
+                            </h5>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>{lesson.duration ? `${Math.floor(lesson.duration / 60)}:${(lesson.duration % 60).toString().padStart(2, '0')} นาที` : 'ไม่ระบุเวลา'}</span>
+                              </span>
+                              <span className="truncate max-w-[200px] text-[11px] font-mono text-slate-400">
+                                {lesson.videoUrl}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons: Edit & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => setEditingLesson(lesson)}
+                            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                            title="แก้ไขบทเรียนนี้"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>แก้ไข</span>
+                          </button>
+                          <button
+                            onClick={() => setDeletingLesson(lesson)}
+                            className="p-2 rounded-xl border border-rose-100 hover:bg-rose-50 text-rose-500 hover:text-rose-700 transition cursor-pointer"
+                            title="ลบบทเรียนนี้"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Col: Add New Lesson Form */}
+            <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-rose-100 shadow-sm space-y-5">
+              <div className="border-b border-slate-100 pb-3">
+                <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
+                  <PlusCircle className="w-4 h-4 text-rose-600" />
+                  <span>เพิ่มบทเรียนใหม่ในคอร์สนี้</span>
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  อัปโหลดวิดีโอหรือระบุ URL พร้อมตั้งชื่อบทเรียน
+                </p>
+              </div>
+
+              <form onSubmit={handleCreateNewLesson} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    ชื่อบทเรียน <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newLessonTitle}
+                    onChange={(e) => setNewLessonTitle(e.target.value)}
+                    placeholder="เช่น บทที่ 2: React Hooks และ State Management"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 focus:bg-white transition"
+                  />
+                </div>
+
+                {/* Video Upload or URL */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    ไฟล์วิดีโอ / ลิงก์วิดีโอ <span className="text-rose-500">*</span>
+                  </label>
+                  
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      id="new-lesson-video"
+                      accept="video/mp4,video/webm,video/ogg"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setNewLessonVideoFile(file);
+                          setNewLessonVideoPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="hidden"
+                    />
+
+                    <div
+                      onClick={() => document.getElementById('new-lesson-video')?.click()}
+                      className="border-2 border-dashed border-rose-200 hover:border-rose-400 bg-rose-50/40 rounded-xl p-4 text-center cursor-pointer transition"
+                    >
+                      <UploadCloud className="w-7 h-7 text-rose-500 mx-auto mb-1" />
+                      <p className="text-xs font-bold text-slate-700">
+                        {newLessonVideoFile ? newLessonVideoFile.name : 'เลือกไฟล์วิดีโอเพื่ออัปโหลด'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">MP4, WEBM (สูงสุด 100 MB)</p>
+                    </div>
+
+                    <div className="relative">
+                      <span className="text-[10px] text-slate-400 mb-1 block">หรือใส่ Video URL โดยตรง:</span>
+                      <input
+                        type="text"
+                        value={newLessonVideoUrl}
+                        onChange={(e) => {
+                          setNewLessonVideoUrl(e.target.value);
+                          setNewLessonVideoPreview(e.target.value);
+                        }}
+                        placeholder="https://... หรือ /uploads/videos/xxx.mp4"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 focus:bg-white transition"
+                      />
+                    </div>
+
+                    {newLessonVideoPreview && (
+                      <div className="mt-2 rounded-xl overflow-hidden bg-black aspect-video relative">
+                        <video
+                          src={newLessonVideoPreview}
+                          controls
+                          onLoadedMetadata={(e) => {
+                            const d = e.target.duration;
+                            if (d && isFinite(d) && d > 0) {
+                              setNewLessonDuration(Math.round(d));
+                            }
+                          }}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingLesson || newLessonUploading}
+                  className="w-full py-3 rounded-xl crimson-gradient text-white font-bold text-xs shadow-md shadow-rose-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {submittingLesson || newLessonUploading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                      <span>กำลังบันทึกบทเรียน...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>บันทึกบทเรียนนี้</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1510,6 +1926,64 @@ export default function InstructorDashboard() {
                 className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-sm shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {questionActionLoading ? 'กำลังลบ...' : 'ยืนยันลบคำถาม'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ================= EDIT LESSON MODAL ================= */}
+      {editingLesson && (
+        <EditLessonModal
+          isOpen={!!editingLesson}
+          onClose={() => setEditingLesson(null)}
+          lesson={editingLesson}
+          onSuccess={async () => {
+            setEditingLesson(null);
+            await loadLessonsForCourse(selectedLessonCourseId);
+            await loadCourses();
+          }}
+        />
+      )}
+
+      {/* ================= DELETE LESSON MODAL ================= */}
+      {deletingLesson && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-rose-100 space-y-5 animate-in zoom-in-95 duration-150 text-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-lg font-extrabold text-slate-900">
+                  ยืนยันการลบบทเรียนนี้?
+                </h4>
+                <p className="text-slate-500 text-xs sm:text-sm leading-relaxed">
+                  "{deletingLesson.title}"
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-rose-50 rounded-2xl text-xs text-rose-700 border border-rose-100 leading-relaxed">
+              ⚠️ การลบบทเรียนจะทำให้ประวัติการเรียน (Progress) ในบทนี้ถูกลบออกจากระบบด้วย
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                disabled={lessonActionLoading}
+                onClick={() => setDeletingLesson(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs cursor-pointer hover:bg-slate-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                disabled={lessonActionLoading}
+                onClick={handleDeleteLesson}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-xs shadow-sm shadow-rose-600/30 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {lessonActionLoading ? 'กำลังลบ...' : 'ยืนยันลบบทเรียน'}
               </button>
             </div>
           </div>

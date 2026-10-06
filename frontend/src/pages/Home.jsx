@@ -17,7 +17,7 @@ import {
   Search,
   SlidersHorizontal,
 } from 'lucide-react';
-import { getCourses, getMyCourses } from '../api';
+import { getCourses, getMyCourses, getUserProgressSummary } from '../api';
 import { useBookmarks } from '../context/BookmarkContext';
 import CoursePreviewModal from '../components/CoursePreviewModal';
 
@@ -125,6 +125,7 @@ function Home({ externalSearchQuery = '' }) {
 
   const [dbCourses, setDbCourses] = useState([]);
   const [activeCourse, setActiveCourse] = useState(null);
+  const [progressSummary, setProgressSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Filter & Search states
@@ -141,15 +142,57 @@ function Home({ externalSearchQuery = '' }) {
     }
   }, [externalSearchQuery]);
 
-  // Load backend database courses & user enrolled courses
+  // Helper ฟังก์ชันแปลงเวลาเรียน
+  const formatLearningHours = (seconds) => {
+    if (!seconds || seconds <= 0) return '0 ชม.';
+    if (seconds < 3600) {
+      const minutes = Math.ceil(seconds / 60);
+      return `${minutes} นาที`;
+    }
+    const hours = (seconds / 3600).toFixed(1);
+    return `${hours} ชม.`;
+  };
+
+  const formatTime = (seconds) => {
+    if (!seconds || seconds <= 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return 'ล่าสุด';
+    try {
+      const diffMs = Date.now() - new Date(dateString).getTime();
+      const diffSec = Math.floor(diffMs / 1000);
+      if (diffSec < 60) return 'เมื่อสักครู่';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} นาทีที่แล้ว`;
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return `${diffHr} ชม. ที่แล้ว`;
+      const diffDay = Math.floor(diffHr / 24);
+      return `${diffDay} วันที่แล้ว`;
+    } catch {
+      return 'ล่าสุด';
+    }
+  };
+
+  // Load backend database courses & user enrolled courses & real progress summary
   useEffect(() => {
-    Promise.all([
+    const promises = [
       getCourses().catch(() => []),
       user ? getMyCourses().catch(() => []) : Promise.resolve([]),
-    ])
-      .then(([coursesData, myCoursesData]) => {
+      user ? getUserProgressSummary().catch(() => null) : Promise.resolve(null),
+    ];
+
+    Promise.all(promises)
+      .then(([coursesData, myCoursesData, summaryData]) => {
         if (Array.isArray(coursesData) && coursesData.length > 0) {
           setDbCourses(coursesData);
+        }
+
+        if (summaryData && !summaryData.error) {
+          setProgressSummary(summaryData);
         }
 
         // Set resume learning active card
@@ -263,7 +306,9 @@ function Home({ externalSearchQuery = '' }) {
                     <Clock className="w-4 h-4 shrink-0" />
                     <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Total Hours</span>
                   </div>
-                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">24.5 ชม.</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">
+                    {user ? formatLearningHours(progressSummary?.totalWatchedSeconds) : `${allCourses.length * 5} ชม.`}
+                  </p>
                   <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">เวลาเรียนสะสมทั้งหมด</p>
                 </div>
 
@@ -272,7 +317,9 @@ function Home({ externalSearchQuery = '' }) {
                     <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Completed</span>
                   </div>
-                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">3 คอร์ส</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">
+                    {user ? `${progressSummary?.completedCoursesCount || 0} คอร์ส` : `${allCourses.length} คอร์ส`}
+                  </p>
                   <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">ผ่านการเรียนสำเร็จ</p>
                 </div>
 
@@ -281,7 +328,9 @@ function Home({ externalSearchQuery = '' }) {
                     <Award className="w-4 h-4 text-amber-500 shrink-0" />
                     <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">Certificates</span>
                   </div>
-                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">2 ใบรับรอง</p>
+                  <p className="text-base sm:text-xl font-extrabold text-slate-900 truncate">
+                    {user ? `${progressSummary?.certificatesCount || 0} ใบรับรอง` : `${allCourses.length} ใบรับรอง`}
+                  </p>
                   <p className="text-[10px] text-slate-400 mt-0.5 hidden sm:block">ประกาศนียบัตรที่ได้รับ</p>
                 </div>
               </div>
@@ -292,100 +341,150 @@ function Home({ externalSearchQuery = '' }) {
               <div className="w-full bg-white rounded-3xl p-6 border border-rose-100 crimson-shadow flex flex-col justify-between relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 rounded-full -mr-10 -mt-10 blur-xl pointer-events-none" />
 
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                      <Play className="w-3 h-3 fill-rose-600 text-rose-600" />
-                      <span>เรียนต่อจากเดิม (Active Course)</span>
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      <span>รับชมล่าสุด 2 ชม. ที่แล้ว</span>
-                    </span>
-                  </div>
-
-                  {activeCourse ? (
-                    <div className="space-y-3">
-                      <div className="relative h-28 rounded-2xl overflow-hidden shadow-xs">
-                        <img
-                          src={activeCourse.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800'}
-                          alt={activeCourse.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
-                          <span className="text-white text-xs font-bold truncate">
-                            {activeCourse.title}
-                          </span>
-                        </div>
+                {progressSummary?.activeCourse ? (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Play className="w-3 h-3 fill-rose-600 text-rose-600" />
+                          <span>เรียนต่อจากเดิม (Active Course)</span>
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>รับชมล่าสุด {getRelativeTime(progressSummary.activeCourse.updatedAt)}</span>
+                        </span>
                       </div>
 
-                      <div>
-                        <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className="text-slate-700">บทที่ 3: State & Lifecycle Management</span>
-                          <span className="text-rose-600">68%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                          <div
-                            className="crimson-gradient h-full rounded-full transition-all duration-500"
-                            style={{ width: '68%' }}
+                      <div className="space-y-3">
+                        <div className="relative h-28 rounded-2xl overflow-hidden shadow-xs">
+                          <img
+                            src={
+                              progressSummary.activeCourse.course?.thumbnail ||
+                              'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800'
+                            }
+                            alt={progressSummary.activeCourse.course?.title}
+                            className="w-full h-full object-cover"
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
+                            <span className="text-white text-xs font-bold truncate">
+                              {progressSummary.activeCourse.course?.title}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
-                          <span>ความคืบหน้าบทเรียน 68%</span>
-                          <span>Timestamp: 18:42 / 27:30</span>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold mb-1.5">
+                            <span className="text-slate-700 truncate pr-2">
+                              {progressSummary.activeCourse.lesson
+                                ? `บทที่ ${progressSummary.activeCourse.lesson.order}: ${progressSummary.activeCourse.lesson.title}`
+                                : 'เริ่มต้นบทเรียนแรก'}
+                            </span>
+                            <span className="text-rose-600 shrink-0">
+                              {progressSummary.activeCourse.coursePercentage}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                            <div
+                              className="crimson-gradient h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, progressSummary.activeCourse.coursePercentage))}%`,
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                            <span>ความคืบหน้าคอร์ส {progressSummary.activeCourse.coursePercentage}%</span>
+                            <span>
+                              Timestamp: {formatTime(progressSummary.activeCourse.watchedSeconds)} /{' '}
+                              {formatTime(progressSummary.activeCourse.lesson?.duration || 0)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="relative h-28 rounded-2xl overflow-hidden shadow-xs">
-                        <img
-                          src="https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800"
-                          alt="React course"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
-                          <span className="text-white text-xs font-bold truncate">
-                            React สำหรับมือใหม่ (Beginner Course)
-                          </span>
-                        </div>
+
+                    <div className="pt-4 mt-3 border-t border-slate-100">
+                      <button
+                        onClick={() => {
+                          const cId = progressSummary.activeCourse.course?.id;
+                          const lId = progressSummary.activeCourse.lesson?.id;
+                          if (cId) {
+                            navigate(`/learn/${cId}${lId ? `?lesson=${lId}` : ''}`);
+                          }
+                        }}
+                        className="w-full py-3 px-4 rounded-xl crimson-gradient text-white font-bold text-sm hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>เรียนต่อทันที (Continue Lesson)</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Sparkles className="w-3 h-3 text-rose-600" />
+                          <span>{user ? 'เริ่มต้นเรียนรู้ (Get Started)' : 'คอร์สแนะนำ (Featured Course)'}</span>
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>พร้อมเรียนรู้ตลอด 24 ชม.</span>
+                        </span>
                       </div>
 
-                      <div>
-                        <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className="text-slate-700">บทที่ 2: JSX, Component & Props</span>
-                          <span className="text-rose-600">68%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                          <div
-                            className="crimson-gradient h-full rounded-full"
-                            style={{ width: '68%' }}
+                      <div className="space-y-3">
+                        <div className="relative h-28 rounded-2xl overflow-hidden shadow-xs">
+                          <img
+                            src={
+                              allCourses[0]?.thumbnail ||
+                              'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800'
+                            }
+                            alt={allCourses[0]?.title || 'Featured'}
+                            className="w-full h-full object-cover"
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-3">
+                            <span className="text-white text-xs font-bold truncate">
+                              {allCourses[0]?.title || 'คอร์สเรียนแนะนำ'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
-                          <span>ความคืบหน้าบทเรียน 68%</span>
-                          <span>Timestamp: 12:15 / 18:00</span>
+
+                        <div>
+                          <div className="flex justify-between text-xs font-bold mb-1.5">
+                            <span className="text-slate-700 truncate pr-2">
+                              {user ? 'ยังไม่มีคอร์สที่กำลังเรียน' : 'คอร์สเริ่มต้นสำหรับทุกคน'}
+                            </span>
+                            <span className="text-rose-600 shrink-0">0%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                            <div className="crimson-gradient h-full rounded-full" style={{ width: '0%' }} />
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1.5 font-medium">
+                            <span>{user ? 'เลือกคอร์สเพื่อเริ่มต้นเรียน' : 'สมัครสมาชิกฟรีเพื่อเข้าเรียน'}</span>
+                            <span>{allCourses[0]?.duration || 'เรียนฟรี'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                <div className="pt-4 mt-3 border-t border-slate-100">
-                  <button
-                    onClick={() => {
-                      if (activeCourse) {
-                        navigate(`/learn/${activeCourse.id}`);
-                      } else {
-                        navigate('/learn/4');
-                      }
-                    }}
-                    className="w-full py-3 px-4 rounded-xl crimson-gradient text-white font-bold text-sm hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>เรียนต่อทันที (Continue Lesson)</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
+                    <div className="pt-4 mt-3 border-t border-slate-100">
+                      <button
+                        onClick={() => {
+                          if (allCourses.length > 0) {
+                            navigate(`/course/${allCourses[0].id}`);
+                          } else {
+                            const el = document.getElementById('course-catalog');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="w-full py-3 px-4 rounded-xl crimson-gradient text-white font-bold text-sm hover:opacity-95 shadow-md shadow-rose-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>{user ? 'เลือกคอร์สเรียน (Explore Courses)' : 'เริ่มเรียนคอร์สนี้ (Start Learning)'}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

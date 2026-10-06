@@ -11,8 +11,10 @@ import {
   Award,
   ArrowLeft,
   HelpCircle,
+  Edit3,
 } from 'lucide-react';
 import { getCourse, enrollCourse, checkEnrollment } from '../api';
+import EditLessonModal from '../components/EditLessonModal';
 
 function CourseDetail() {
   const { id } = useParams();
@@ -22,6 +24,7 @@ function CourseDetail() {
   const [enrolled, setEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
+  const [editingLesson, setEditingLesson] = useState(null);
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const isAdmin = user?.role === 'admin';
@@ -250,9 +253,21 @@ function CourseDetail() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
-                      <Clock className="w-4 h-4" />
-                      <span>{formatDuration(lesson.duration)}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{formatDuration(lesson.duration)}</span>
+                      </div>
+                      {isAdmin && (
+                        <button
+                          onClick={() => setEditingLesson(lesson)}
+                          className="px-2.5 py-1 text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                          title="แก้ไขบทเรียนนี้"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>แก้ไข</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -276,6 +291,25 @@ function CourseDetail() {
           </div>
         </div>
       </div>
+
+      {/* Edit Lesson Modal */}
+      {editingLesson && (
+        <EditLessonModal
+          isOpen={!!editingLesson}
+          onClose={() => setEditingLesson(null)}
+          lesson={editingLesson}
+          onSuccess={(updated) => {
+            setEditingLesson(null);
+            setCourse((prev) => {
+              if (!prev || !prev.lessons) return prev;
+              return {
+                ...prev,
+                lessons: prev.lessons.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)),
+              };
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

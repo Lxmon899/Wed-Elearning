@@ -102,9 +102,53 @@ export const unenrollCourse = async (courseId) => {
 // ==========================================
 // Lessons
 // ==========================================
-export const getLessons = async (courseId) => {
-  const res = await fetch(`${API_URL}/courses/${courseId}/lessons`, {
+export const getLessons = async (courseId, manage = false) => {
+  const url = manage
+    ? `${API_URL}/courses/${courseId}/lessons?manage=true`
+    : `${API_URL}/courses/${courseId}/lessons`;
+  const res = await fetch(url, {
     headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  return res.json();
+};
+
+export const getLesson = async (lessonId) => {
+  const res = await fetch(`${API_URL}/courses/lessons/${lessonId}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  return res.json();
+};
+
+export const updateLesson = async (lessonId, lessonData) => {
+  const res = await fetch(`${API_URL}/courses/lessons/${lessonId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(lessonData),
+  });
+  return res.json();
+};
+
+export const deleteLesson = async (lessonId) => {
+  const res = await fetch(`${API_URL}/courses/lessons/${lessonId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${getToken()}`,
+    },
+  });
+  return res.json();
+};
+
+export const reorderLessons = async (courseId, orderedLessonIds) => {
+  const res = await fetch(`${API_URL}/courses/${courseId}/lessons-reorder`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ orderedLessonIds }),
   });
   return res.json();
 };
@@ -112,14 +156,14 @@ export const getLessons = async (courseId) => {
 // ==========================================
 // Progress
 // ==========================================
-export const updateProgress = async (lessonId, watchedSeconds, completed = false) => {
+export const updateProgress = async (lessonId, watchedSeconds, completed = false, force = false) => {
   const res = await fetch(`${API_URL}/progress`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${getToken()}`
     },
-    body: JSON.stringify({ lessonId, watchedSeconds, completed }),
+    body: JSON.stringify({ lessonId, watchedSeconds, completed, force }),
   });
   return res.json();
 };
@@ -133,6 +177,13 @@ export const getCourseProgress = async (courseId) => {
 
 export const getLessonProgress = async (lessonId) => {
   const res = await fetch(`${API_URL}/progress/lessons/${lessonId}`, {
+    headers: { 'Authorization': `Bearer ${getToken()}` }
+  });
+  return res.json();
+};
+
+export const getUserProgressSummary = async () => {
+  const res = await fetch(`${API_URL}/progress/summary`, {
     headers: { 'Authorization': `Bearer ${getToken()}` }
   });
   return res.json();
