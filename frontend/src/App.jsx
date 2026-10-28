@@ -12,6 +12,7 @@ import CreateCourse from './pages/CreateCourse';
 import Certificates from './pages/Certificates';
 import InstructorDashboard from './pages/InstructorDashboard';
 import { BookmarkProvider } from './context/BookmarkContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 function AppContent() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,9 +43,11 @@ function AppContent() {
 function App() {
   return (
     <BookmarkProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <NotificationProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </NotificationProvider>
     </BookmarkProvider>
   );
 }

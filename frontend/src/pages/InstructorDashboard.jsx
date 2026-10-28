@@ -45,6 +45,7 @@ import {
   uploadVideo
 } from '../api';
 import EditLessonModal from '../components/EditLessonModal';
+import { isYouTubeUrl, getEmbedUrl } from '../utils/videoUtils';
 
 const SAMPLE_THUMBNAILS = [
   {
@@ -247,9 +248,10 @@ export default function InstructorDashboard() {
 
     try {
       setSubmittingLesson(true);
+      const normalizedUrl = isYouTubeUrl(finalVideoUrl) ? getEmbedUrl(finalVideoUrl) : finalVideoUrl.trim();
       const res = await createLesson(selectedLessonCourseId, {
         title: newLessonTitle.trim(),
-        videoUrl: finalVideoUrl.trim(),
+        videoUrl: normalizedUrl,
         duration: newLessonDuration || null,
         order: lessonsList.length + 1,
       });
@@ -1299,7 +1301,7 @@ export default function InstructorDashboard() {
                     </div>
 
                     <div className="relative">
-                      <span className="text-[10px] text-slate-400 mb-1 block">หรือใส่ Video URL โดยตรง:</span>
+                      <span className="text-[10px] text-slate-400 mb-1 block">หรือใส่ Video URL โดยตรง (รองรับ YouTube):</span>
                       <input
                         type="text"
                         value={newLessonVideoUrl}
@@ -1307,24 +1309,38 @@ export default function InstructorDashboard() {
                           setNewLessonVideoUrl(e.target.value);
                           setNewLessonVideoPreview(e.target.value);
                         }}
-                        placeholder="https://... หรือ /uploads/videos/xxx.mp4"
+                        placeholder="https://... เช่น ลิงก์ YouTube (watch, youtu.be, shorts) หรือไฟล์ MP4"
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 focus:bg-white transition"
                       />
+                      <span className="text-[10px] text-slate-400 mt-1 block">
+                        💡 วางลิงก์ YouTube ได้ทุกรูปแบบ ระบบจะแปลงเป็น Embed ให้อัตโนมัติ
+                      </span>
                     </div>
 
                     {newLessonVideoPreview && (
-                      <div className="mt-2 rounded-xl overflow-hidden bg-black aspect-video relative">
-                        <video
-                          src={newLessonVideoPreview}
-                          controls
-                          onLoadedMetadata={(e) => {
-                            const d = e.target.duration;
-                            if (d && isFinite(d) && d > 0) {
-                              setNewLessonDuration(Math.round(d));
-                            }
-                          }}
-                          className="w-full h-full object-contain"
-                        />
+                      <div className="mt-2 rounded-xl overflow-hidden bg-black aspect-video relative border border-slate-800">
+                        {isYouTubeUrl(newLessonVideoPreview) ? (
+                          <iframe
+                            key={newLessonVideoPreview}
+                            src={getEmbedUrl(newLessonVideoPreview)}
+                            title="ตัวอย่างวิดีโอ YouTube"
+                            className="w-full h-full border-0 aspect-video"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video
+                            src={newLessonVideoPreview}
+                            controls
+                            onLoadedMetadata={(e) => {
+                              const d = e.target.duration;
+                              if (d && isFinite(d) && d > 0) {
+                                setNewLessonDuration(Math.round(d));
+                              }
+                            }}
+                            className="w-full h-full object-contain"
+                          />
+                        )}
                       </div>
                     )}
                   </div>

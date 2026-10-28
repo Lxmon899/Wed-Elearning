@@ -5,6 +5,7 @@ async function main() {
   console.log('🌱 กำลังรีเซ็ตและใส่ข้อมูลตัวอย่างคอร์สเรียนทั้งหมด...');
 
   // ล้างข้อมูลเก่าก่อน
+  await prisma.notification.deleteMany();
   await prisma.quizAttempt.deleteMany();
   await prisma.choice.deleteMany();
   await prisma.question.deleteMany();
@@ -205,7 +206,37 @@ async function main() {
     });
   }
 
-  console.log('✅ สร้างข้อมูลคอร์ส บทเรียน และแบบทดสอบเรียบร้อยแล้ว!');
+  // สร้างแจ้งเตือนตัวอย่างให้ student
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: student.id,
+        title: '🎉 คอร์สใหม่เปิดตัว!',
+        message: 'React 18 & Next.js Fullstack พร้อมให้เรียนรู้แล้ววันนี้!',
+        type: 'course',
+        link: '/',
+        isRead: false,
+      },
+      {
+        userId: student.id,
+        title: '🔥 ไฟลุก! Streak 5 วันติด',
+        message: 'เรียนอีก 15 นาทีเพื่อรับเหรียญรางวัลประจำสัปดาห์',
+        type: 'info',
+        link: '/my-courses',
+        isRead: false,
+      },
+      {
+        userId: student.id,
+        title: '🏆 ใบรับรองการจบหลักสูตร',
+        message: 'ยินดีด้วย! คุณผ่านการทดสอบหลักสูตรเรียบร้อยแล้ว ดาวน์โหลดใบ Certificate ได้เลย',
+        type: 'certificate',
+        link: '/certificates',
+        isRead: true,
+      },
+    ],
+  });
+
+  console.log('✅ สร้างข้อมูลคอร์ส บทเรียน แบบทดสอบ และการแจ้งเตือนเรียบร้อยแล้ว!');
   console.log('🔑 รหัสผ่านทดสอบ:');
   console.log('   - Admin: admin@demo.com / 123456');
   console.log('   - Student: student@demo.com / 123456');

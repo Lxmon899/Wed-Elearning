@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Award, HelpCircle, Edit3 } from 'lucide-react';
+import { Award, HelpCircle, Edit3, CheckCircle2 } from 'lucide-react';
 import { getLessons, updateProgress, getCourseProgress, getLessonProgress, getCourse } from '../api';
+import { isYouTubeUrl, getEmbedUrl } from '../utils/videoUtils';
 import ProgressBar from '../components/ProgressBar';
 import CertificateModal from '../components/CertificateModal';
 import QuizModal from '../components/QuizModal';
@@ -150,7 +151,7 @@ function Learn() {
             if (currentLesson && videoRef.current) {
                 const token = localStorage.getItem('token');
                 if (token) {
-                    fetch('http://localhost:3001/api/progress', {
+                    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/progress`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -273,22 +274,38 @@ function Learn() {
                 </div>
 
                 {/* Video Player */}
-                <div className="flex-1 bg-black flex items-center justify-center relative">
-                    <video
-                        ref={videoRef}
-                        src={currentLesson.videoUrl}
-                        controls
-                        className="w-full max-h-full"
-                        playsInline
-                    />
+                <div className="flex-1 bg-black flex items-center justify-center relative overflow-hidden min-h-[300px]">
+                    {isYouTubeUrl(currentLesson.videoUrl) ? (
+                        <iframe
+                            key={currentLesson.id}
+                            src={getEmbedUrl(currentLesson.videoUrl)}
+                            title={currentLesson.title}
+                            className="w-full h-full aspect-video border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            src={currentLesson.videoUrl}
+                            controls
+                            className="w-full max-h-full"
+                            playsInline
+                        />
+                    )}
                 </div>
 
                 {/* Info + Navigation */}
                 <div className="bg-gray-800 p-4 border-t border-gray-700">
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex-1 mr-4">
-                            <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
+                        <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-2.5">
                                 <h2 className="text-xl font-bold">{currentLesson.title}</h2>
+                                {isYouTubeUrl(currentLesson.videoUrl) && (
+                                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-950 text-red-400 border border-red-800/60 inline-flex items-center gap-1">
+                                        ▶ YouTube Embed
+                                    </span>
+                                )}
                                 {user?.role === 'admin' && (
                                     <button
                                         onClick={() => setEditingLesson(currentLesson)}
@@ -304,18 +321,30 @@ function Learn() {
                                 บทที่ {currentLesson.order} • {lessons.length} บทเรียน
                             </p>
                         </div>
-                        <div className="flex gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                            <button
+                                onClick={(e) => toggleLessonCompleted(currentLesson, e)}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                    currentLesson.completed
+                                        ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/50'
+                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                                }`}
+                                title={currentLesson.completed ? 'คลิกเพื่อเปลี่ยนสถานะเป็นยังไม่จบ' : 'คลิกเพื่อทำเครื่องหมายว่าเรียนจบ'}
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>{currentLesson.completed ? 'เรียนจบแล้ว' : 'ทำเครื่องหมายว่าเรียนจบ'}</span>
+                            </button>
                             <button
                                 onClick={goToPrevLesson}
                                 disabled={currentIndex === 0}
-                                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-30 hover:bg-gray-600 cursor-pointer"
+                                className="px-4 py-2 bg-gray-700 rounded-lg disabled:opacity-30 hover:bg-gray-600 cursor-pointer text-xs font-semibold"
                             >
                                 ← ก่อนหน้า
                             </button>
                             <button
                                 onClick={goToNextLesson}
                                 disabled={currentIndex === lessons.length - 1}
-                                className="px-4 py-2 bg-rose-600 rounded-lg disabled:opacity-30 hover:bg-rose-500 cursor-pointer"
+                                className="px-4 py-2 bg-rose-600 rounded-lg disabled:opacity-30 hover:bg-rose-500 cursor-pointer text-xs font-semibold"
                             >
                                 ถัดไป →
                             </button>

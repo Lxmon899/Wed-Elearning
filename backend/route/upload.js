@@ -15,7 +15,8 @@ router.post('/video', auth, upload.single('video'), (req, res) => {
         }
 
         // สร้าง URL ที่เข้าถึงไฟล์ได้
-        const videoUrl = `http://localhost:3001/uploads/videos/${req.file.filename}`;
+        const baseUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+        const videoUrl = `${baseUrl}/uploads/videos/${req.file.filename}`;
 
         res.json({
             message: 'อัปโหลดสำเร็จ!',

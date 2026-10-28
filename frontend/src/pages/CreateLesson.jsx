@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { uploadVideo, createLesson } from '../api';
+import { isYouTubeUrl, getEmbedUrl } from '../utils/videoUtils';
 
 function CreateLesson() {
     const { id } = useParams(); // courseId
@@ -77,9 +78,10 @@ function CreateLesson() {
         }
 
         try {
+            const finalUrl = isYouTubeUrl(videoUrl) ? getEmbedUrl(videoUrl) : videoUrl.trim();
             const data = await createLesson(id, {
                 title: title.trim(),
-                videoUrl: videoUrl,
+                videoUrl: finalUrl,
                 duration: duration || null,
             });
 
@@ -179,26 +181,57 @@ function CreateLesson() {
                             )}
 
                             {videoUrl && (
-                                <div className="mt-2 text-green-600 font-medium flex items-center gap-2">
+                                <div className="mt-2 text-green-600 font-medium flex items-center gap-2 text-xs">
                                     <span>✅</span>
-                                    <span>อัปโหลดสำเร็จ: {videoUrl}</span>
+                                    <span>ที่อยู่วิดีโอ: {videoUrl}</span>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
+                {/* หรือป้อนลิงก์วิดีโอโดยตรง เช่น YouTube */}
+                <div>
+                    <label className="block text-gray-700 font-semibold mb-1 text-sm">หรือ ป้อน Video URL โดยตรง (รองรับ YouTube)</label>
+                    <input
+                        type="text"
+                        value={videoUrl}
+                        onChange={(e) => {
+                            setVideoUrl(e.target.value);
+                            setVideoPreview(e.target.value);
+                            if (videoFile) setVideoFile(null);
+                        }}
+                        placeholder="https://www.youtube.com/watch?v=... หรือลิงก์ไฟล์วิดีโอ MP4"
+                        className="w-full p-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                        💡 รองรับทั้งลิงก์ YouTube (watch, youtu.be, shorts) ระบบจะแปลงเป็น Embed ให้อัตโนมัติ
+                    </p>
+                </div>
+
                 {/* Preview วิดีโอ */}
                 {(videoPreview || videoUrl) && (
                     <div>
-                        <label className="block text-gray-700 font-semibold mb-2">ตัวอย่างวิดีโอ</label>
-                        <video
-                            src={videoUrl || videoPreview}
-                            controls
-                            onLoadedMetadata={handleLoadedMetadata}
-                            className="w-full rounded-lg bg-black"
-                            style={{ maxHeight: '400px' }}
-                        />
+                        <label className="block text-gray-700 font-semibold mb-2 text-sm">ตัวอย่างวิดีโอ</label>
+                        {isYouTubeUrl(videoUrl || videoPreview) ? (
+                            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black border border-slate-800">
+                                <iframe
+                                    src={getEmbedUrl(videoUrl || videoPreview)}
+                                    title="ตัวอย่างวิดีโอ YouTube"
+                                    className="w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        ) : (
+                            <video
+                                src={videoUrl || videoPreview}
+                                controls
+                                onLoadedMetadata={handleLoadedMetadata}
+                                className="w-full rounded-xl bg-black"
+                                style={{ maxHeight: '400px' }}
+                            />
+                        )}
                     </div>
                 )}
 

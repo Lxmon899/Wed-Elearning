@@ -1,0 +1,36 @@
+# render.yaml — Render.com Deployment Config
+# วาง file นี้ที่ root: elearning-platform/render.yaml
+# Docs: https://render.com/docs/yaml-spec
+
+services:
+  - type: web
+    name: elearning-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # ชี้ DATABASE_URL ไปที่ persistent disk
+      - key: DATABASE_URL
+        value: file:/data/database.sqlite
+      # ชี้ uploads ไปที่ persistent disk
+      - key: UPLOAD_DIR
+        value: /data/uploads
+      # ตั้งค่าเหล่านี้บน Render Dashboard (Environment tab) เพื่อความปลอดภัย
+      - key: JWT_SECRET
+        sync: false          # ← Render จะขอให้กรอกใน dashboard
+      - key: FRONTEND_URL
+        sync: false          # ← URL ของ frontend เช่น https://my-app.vercel.app
+      - key: BACKEND_URL
+        sync: false          # ← URL ของ backend เช่น https://elearning-backend.onrender.com
+
+    # Persistent Disk — เก็บ SQLite DB และไฟล์วิดีโอ
+    # หมายเหตุ: Persistent Disk ต้องการ Render Starter Plan ($7/เดือน)
+    disk:
+      name: elearning-data
+      mountPath: /data
+      sizeGB: 10             # ปรับตามความต้องการ (10GB ≈ ~100 วิดีโอ)

@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma'); // ← เปลี่ยนตรงนี้!
+const { createNotification } = require('../lib/notificationService');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -18,6 +19,15 @@ router.post('/register', async (req, res) => {
         password: hashedPassword,
         name,
       },
+    });
+
+    // ส่งแจ้งเตือนต้อนรับสมาชิกใหม่
+    await createNotification({
+      userId: user.id,
+      title: '🎉 ยินดีต้อนรับสู่ CrimsonAcademy!',
+      message: `สวัสดีคุณ ${user.name}! เริ่มต้นการเรียนรู้และสำรวจคอร์สเรียนชั้นนำได้ทันที`,
+      type: 'info',
+      link: '/',
     });
 
     res.json({ 

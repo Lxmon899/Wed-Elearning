@@ -14,9 +14,10 @@ model User {
   role      String   @default("student")
   createdAt DateTime @default(now()) @map("created_at")
 
-  enrollments  Enrollment[]
-  progresses   Progress[]
-  quizAttempts QuizAttempt[]
+  enrollments   Enrollment[]
+  progresses    Progress[]
+  quizAttempts  QuizAttempt[]
+  notifications Notification[]
   
   @@map("users")
 }
@@ -122,4 +123,19 @@ model QuizAttempt {
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("quiz_attempts")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  title     String
+  message   String
+  type      String   @default("info") // info, course, certificate, quiz, success
+  link      String?
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

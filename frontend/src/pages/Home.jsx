@@ -205,30 +205,43 @@ function Home({ externalSearchQuery = '' }) {
       });
   }, []);
 
-  // Merge backend courses with rich curated metadata
+  // Merge backend courses with rich visual metadata
   const allCourses = useMemo(() => {
     if (dbCourses.length === 0) return CURATED_DEFAULT_COURSES;
 
-    // Enhance DB courses with consistent visual attributes
+    // Enhance DB courses with consistent visual attributes using real lessons
     const formattedDbCourses = dbCourses.map((c, idx) => {
       const fallbackCat = idx % 2 === 0 ? 'Web & Full Stack' : 'Cloud & DevOps';
+      const realLessonsCount = c.lessons ? c.lessons.length : (c._count?.lessons ?? 0);
+
+      let computedDuration = c.duration;
+      if (!computedDuration && c.lessons && c.lessons.length > 0) {
+        const totalMinutes = c.lessons.reduce((acc, l) => {
+          const dur = l.duration || 0;
+          const mins = dur >= 60 ? Math.round(dur / 60) : dur;
+          return acc + mins;
+        }, 0);
+        if (totalMinutes > 0) {
+          if (totalMinutes < 60) {
+            computedDuration = `${totalMinutes} นาที`;
+          } else {
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            computedDuration = m > 0 ? `${h} ชม. ${m} นาที` : `${h} ชม.`;
+          }
+        }
+      }
+
       return {
         ...c,
         category: c.category || fallbackCat,
         level: c.level || (idx % 3 === 0 ? 'Advanced' : idx % 2 === 0 ? 'Intermediate' : 'Beginner'),
         rating: c.rating || (4.7 + (idx % 4) * 0.1).toFixed(1),
-        reviewsCount: c.reviewsCount || 120 + idx * 45,
-        duration: c.duration || `${10 + idx * 3} ชม.`,
-        lessonsCount: c.lessons?.length || 8 + idx * 4,
+        reviewsCount: c._count?.enrollments ? (c._count.enrollments * 8 + 24) : (80 + idx * 25),
+        duration: computedDuration || '1 ชม. 30 นาที',
+        lessonsCount: realLessonsCount,
       };
     });
-
-    // Also include curated courses if database only has 1 or 2 courses
-    if (formattedDbCourses.length < 4) {
-      const existingIds = new Set(formattedDbCourses.map((c) => c.id));
-      const additional = CURATED_DEFAULT_COURSES.filter((c) => !existingIds.has(c.id));
-      return [...formattedDbCourses, ...additional];
-    }
 
     return formattedDbCourses;
   }, [dbCourses]);

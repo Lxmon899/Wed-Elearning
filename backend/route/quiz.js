@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
 const jwt = require('jsonwebtoken');
+const { createNotification } = require('../lib/notificationService');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -188,6 +189,21 @@ router.post('/:courseId/quiz/submit', auth, async (req, res) => {
         passed
       }
     });
+
+    // ส่งการแจ้งเตือนเมื่อสอบผ่าน
+    if (passed) {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { title: true }
+      });
+      await createNotification({
+        userId,
+        title: '🏆 ยินดีด้วย! คุณผ่านแบบทดสอบแล้ว',
+        message: `คุณทำคะแนนได้ ${score}/${totalQuestions} (${percentage}%) ในคอร์ส "${course?.title || 'แบบทดสอบ'}" และได้รับใบประกาศนียบัตรแล้ว!`,
+        type: 'certificate',
+        link: '/certificates',
+      });
+    }
 
     res.json({
       message: passed ? 'ยินดีด้วย! คุณผ่านแบบทดสอบแล้ว' : 'คุณยังไม่ผ่านเกณฑ์แบบทดสอบ สามารถลองใหม่ได้',

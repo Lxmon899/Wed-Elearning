@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { BookOpen, Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
 import { login } from '../api';
 
@@ -9,6 +9,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isExpired = searchParams.get('expired') === '1';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,7 +23,9 @@ function Login() {
       if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/');
+        const redirectUrl = sessionStorage.getItem('redirectAfterLogin') || '/';
+        sessionStorage.removeItem('redirectAfterLogin');
+        navigate(redirectUrl);
         window.location.reload();
       } else {
         setError(data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
@@ -52,13 +56,20 @@ function Login() {
           </p>
         </div>
 
+        {isExpired && !error && (
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
+            <span className="text-base shrink-0">⏳</span>
+            <span>เซสชันการใช้งานหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่อีกครั้งเพื่อดำเนินการต่อ</span>
+          </div>
+        )}
+
         {error && (
           <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
             ⚠️ {error}
           </div>
         )}
 
-        {/* Quick Demo Fill */}
+        {import.meta.env.DEV && (
         <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2">
           <div className="text-left">
             <p className="text-xs font-bold text-slate-700 flex items-center gap-1">
@@ -75,6 +86,7 @@ function Login() {
             กรอกอัตโนมัติ
           </button>
         </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

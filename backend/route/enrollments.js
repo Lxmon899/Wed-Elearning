@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma');
 const auth = require('../middleware/auth');
+const { createNotification } = require('../lib/notificationService');
 const router = express.Router();
 
 // ==========================================
@@ -11,11 +12,28 @@ router.post('/', auth, async (req, res) => {
     const { courseId } = req.body;
     const userId = req.user.id; // ได้จาก Token ที่ auth middleware แปลให้
 
-    const enrollment = await prisma.enrollment.create({
-      data: {
-        userId,
-        courseId: parseInt(courseId),
-      },
+    const parsedCourseId = parseInt(courseId);
+
+    const [enrollment, course] = await Promise.all([
+      prisma.enrollment.create({
+        data: {
+          userId,
+          courseId: parsedCourseId,
+        },
+      }),
+      prisma.course.findUnique({
+        where: { id: parsedCourseId },
+        select: { title: true },
+      }),
+    ]);
+
+    // ส่งแจ้งเตือนการลงทะเบียน
+    await createNotification({
+      userId,
+      title: '📚 ลงทะเบียนคอร์สสำเร็จ!',
+      message: `คุณได้ลงทะเบียนคอร์ส "${course?.title || 'คอร์สเรียน'}" เรียบร้อยแล้ว เริ่มเรียนได้ทันที`,
+      type: 'course',
+      link: `/course/${parsedCourseId}`,
     });
 
     res.json({ message: 'ลงทะเบียนสำเร็จ!', enrollment });

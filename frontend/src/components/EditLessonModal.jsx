@@ -11,6 +11,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { updateLesson, uploadVideo } from '../api';
+import { isYouTubeUrl, getEmbedUrl } from '../utils/videoUtils';
 
 export default function EditLessonModal({ isOpen, onClose, lesson, onSuccess }) {
   const [title, setTitle] = useState('');
@@ -238,15 +239,26 @@ export default function EditLessonModal({ isOpen, onClose, lesson, onSuccess }) 
 
             <div className="rounded-2xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center relative border border-slate-800 shadow-inner">
               {videoPreview ? (
-                <video
-                  key={videoPreview}
-                  controls
-                  onLoadedMetadata={handleLoadedMetadata}
-                  className="w-full h-full object-contain"
-                  src={videoPreview}
-                >
-                  เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
-                </video>
+                isYouTubeUrl(videoPreview) ? (
+                  <iframe
+                    key={videoPreview}
+                    src={getEmbedUrl(videoPreview)}
+                    title="ตัวอย่างวิดีโอ YouTube"
+                    className="w-full h-full border-0 aspect-video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    key={videoPreview}
+                    controls
+                    onLoadedMetadata={handleLoadedMetadata}
+                    className="w-full h-full object-contain"
+                    src={videoPreview}
+                  >
+                    เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+                  </video>
+                )
               ) : (
                 <div className="text-center p-6 text-slate-500">
                   <FileVideo className="w-12 h-12 mx-auto mb-2 text-slate-600" />
@@ -278,11 +290,11 @@ export default function EditLessonModal({ isOpen, onClose, lesson, onSuccess }) 
                     setVideoUrl(e.target.value);
                     setVideoPreview(e.target.value);
                   }}
-                  placeholder="https://... หรือ /uploads/videos/xxx.mp4"
+                  placeholder="https://... เช่น ลิงก์ YouTube (watch, youtu.be, shorts) หรือไฟล์ MP4"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 focus:bg-white transition"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  รองรับไฟล์วิดีโอ direct link .mp4, .webm หรือพาธไฟล์ที่อัปโหลดไว้ในระบบ
+                  💡 รองรับทั้งลิงก์ YouTube ทุกรูปแบบ (ระบบจะแปลงเป็น Embed ให้อัตโนมัติ) และไฟล์ direct video .mp4, .webm
                 </p>
               </div>
             ) : (

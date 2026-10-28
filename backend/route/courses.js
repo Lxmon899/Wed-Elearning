@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../lib/prisma'); // ← เปลี่ยนตรงนี้!
 const auth = require('../middleware/auth');
+const { notifyAllUsers } = require('../lib/notificationService');
 const router = express.Router();
 
 // ดึงคอร์สทั้งหมด
@@ -9,6 +10,15 @@ router.get('/', async (req, res) => {
     const courses = await prisma.course.findMany({
       orderBy: { id: 'desc' }, // เรียงจากใหม่ → เก่า
       include: {
+        lessons: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            duration: true,
+            order: true,
+          },
+        },
         _count: {
           select: {
             lessons: true,
@@ -90,6 +100,15 @@ router.post('/', auth, async (req, res) => {
           },
         },
       },
+    });
+
+    // ส่งแจ้งเตือนหาผู้ใช้ทุกคนเมื่อมีคอร์สใหม่
+    await notifyAllUsers({
+      title: '🚀 คอร์สใหม่เปิดตัว!',
+      message: `คอร์ส "${course.title}" พร้อมให้เรียนรู้แล้ว เข้าดูรายละเอียดได้เลย`,
+      type: 'course',
+      link: `/course/${course.id}`,
+      excludeUserId: req.user.id,
     });
 
     res.json({ id: course.id, course, message: 'สร้างคอร์สสำเร็จ' });

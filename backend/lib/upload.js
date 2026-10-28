@@ -1,10 +1,22 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// ใช้ UPLOAD_DIR env var สำหรับ persistent volume บน Railway/Render
+// ตัวอย่าง: UPLOAD_DIR=/data/uploads
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+    ? path.join(process.env.UPLOAD_DIR, 'videos')
+    : path.join(__dirname, '..', 'uploads', 'videos');
+
+// สร้างโฟลเดอร์อัตโนมัติถ้ายังไม่มี
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
 
 // ตั้งค่าที่เก็บไฟล์ + ตั้งชื่อไฟล์
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/videos/'); // เก็บในโฟลเดอร์นี้
+        cb(null, UPLOAD_DIR);
     },
     filename: (req, file, cb) => {
         // ตั้งชื่อไฟล์เป็น: timestamp-ชื่อเดิม (ป้องกันซ้ำ และแปลงอักขระพิเศษ/ช่องว่าง)
